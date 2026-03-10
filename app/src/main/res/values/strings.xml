@@ -1,0 +1,242 @@
+<resources>
+    <string name="app_name">GitHub User Rview</string>
+    <string name="githubid">githubId</string>
+    <string name="detail_deskripsi">Detail Deskripsi</string>
+    <string name="profil_lengkap">Profil Lengkap</string>
+    <string name="tombolshare">tombolshare</string>
+    <string name="like_share">Like | Share</string>
+    <string name="develop_by_sadar_studio_2021">develop by sadar@studio | 2021</string>
+    <string name="ghicon">ghicon</string>
+    <string name="iconnama">iconnama</string>
+    <string name="bar_title_info">GitHub User | Profile Info</string>
+    <string name="bar_title_detail">GitHub User | Detail Info</string>
+    <string name="bar_title_search">GitHub User | Search</string>
+    <string name="bar_title_fav">GitHub User | Favorites</string>
+    <string name="tombollike" />
+    <string name="search_hint">I\'m looking for...</string>
+    <string name="search_menu">Search</string>
+    <string name="tv_name">Name: %1$s,\nLocation: %2$s,\nRepository: %3$d repo(s)</string>
+    <string name="tv_detail_name">Nama Asli : %1$s</string>
+    <string name="tv_detail_profile">Lokasi : %1$s\nRepository : %2$d repo(s)\nAktivitas : %3$s\nFollowers : %4$d peep(s)\nFollowing : %5$d peep(s)</string>
+    <string name="tv_detail_deskripsi">Sekilas tentang %1$s : \n %2$s</string>
+    <string name="tv_detail_id">%1$s (Id: %2$d)</string>
+    <string name="tv_detail_name2">Name: %1$s</string>
+    <string name="tv_detail_profile2">Origin: %1$s | %2$d repos\nActivity: %3$s\nFollowers: %4$d | Following: %5$d</string>
+    <string name="tv_search_for">Search Result for %1$s :</string>
+    <string name="setting">Setting Theme</string>
+    <string name="repos">repos…</string>
+
+    <string name="tab_text_1">Followers</string>
+    <string name="tab_text_2">Following</string>
+
+    <string name="search_result_for">Search Result for :</string>
+    <string name="search_error_empty_query">Masukkan kata kunci pencarian terlebih dahulu.</string>
+    <string name="recent_searches">Recent Searches</string>
+    <string name="recent_searches_empty">Belum ada riwayat pencarian.</string>
+    <string name="clear_recent_searches">Clear</string>
+    <string name="setting_theme">Setting Theme (Dark or Light)</string>
+    <string name="favorites">Favorites</string>
+    <string name="home_toolbar_subtitle">Curated developer picks</string>
+    <string name="home_hero_title">Temukan profil developer yang layak dipantau.</string>
+    <string name="home_hero_subtitle">Beranda kini punya spotlight, ringkasan komunitas, dan akses cepat ke fitur penting.</string>
+    <string name="home_spotlight_label">Spotlight</string>
+    <string name="home_spotlight_meta">%1$,d followers | %2$d repos</string>
+    <string name="home_stat_profiles">Profiles</string>
+    <string name="home_stat_repositories">Repositories</string>
+    <string name="home_stat_followers">Followers</string>
+    <string name="home_open_spotlight">Open Spotlight</string>
+    <string name="home_open_favorites">Open Favorites</string>
+    <string name="home_open_recent">Recent Searches</string>
+    <string name="home_section_title">Community Picks</string>
+    <string name="home_section_subtitle">Tap a card to fetch live profile data from GitHub.</string>
+    <string name="home_card_meta">%1$s | %2$s</string>
+    <string name="home_card_status">%1$,d followers | %2$d repos</string>
+    <string name="home_card_badge_popular">High Reach</string>
+    <string name="home_card_badge_builder">Active Builder</string>
+    <string name="detail_username_format">@%1$s</string>
+    <string name="detail_type_joined">%1$s | Joined %2$s</string>
+    <string name="detail_joined_unknown">date unknown</string>
+    <string name="detail_open_profile">Open GitHub</string>
+    <string name="detail_open_blog">Open Blog</string>
+    <string name="detail_overview_title">Profile Snapshot</string>
+    <string name="detail_about_title">About This Developer</string>
+    <string name="detail_links_title">Links &amp; Endpoints</string>
+    <string name="detail_insight_section_title">Developer Signals</string>
+    <string name="detail_followers_label">Followers</string>
+    <string name="detail_following_label">Following</string>
+    <string name="detail_repositories_label">Repos</string>
+    <string name="detail_gists_label">Gists</string>
+    <string name="detail_overview_body">Company: %1$s\nLocation: %2$s\nPublic repos: %3$d\nPublic gists: %4$d</string>
+    <string name="detail_links_profile">Profile: %1$s</string>
+    <string name="detail_links_blog">Blog: %1$s</string>
+    <string name="detail_links_orgs">Organizations API: %1$s</string>
+    <string name="detail_blog_unavailable">No public blog linked</string>
+    <string name="detail_unknown_value">Not shared</string>
+    <string name="detail_open_link_error">Tidak ada aplikasi untuk membuka link tersebut.</string>
+    <string name="detail_about_fallback">%1$s is listed as a %2$s account and keeps this profile minimal. Explore the repositories and network tab for more context.</string>
+    <string name="detail_insight_body">%1$s with a follow ratio around %2$s. Shipping %3$d repos and %4$d public gists.</string>
+    <string name="detail_signal_high_reach">High reach profile</string>
+    <string name="detail_signal_prolific">Prolific builder</string>
+    <string name="detail_signal_emerging">Growing profile</string>
+    <string name="detail_twitter_value">Twitter: %1$s</string>
+    <string name="detail_network_value">Network: %1$d followers | %2$d following</string>
+    <string name="detail_share">Share</string>
+
+    <string name="title">Judul</string>
+    <string name="description">Deskripsi</string>
+    <string name="submit">Submit</string>
+    <string name="delete">Hapus</string>
+    <string name="date">Date</string>
+    <string name="message_undo">Batalkan menghapus item sebelumnya?</string>
+    <string name="message_ok">OK</string>
+    <string name="cancel">Batal</string>
+    <string name="empty">Field can not be blank</string>
+    <string name="update">Update</string>
+    <string name="change">Ubah</string>
+    <string name="add">Tambah</string>
+    <string name="save">Simpan</string>
+    <string name="yes">Ya</string>
+    <string name="no">Tidak</string>
+    <string name="message_cancel">Apakah anda ingin membatalkan perubahan pada form?</string>
+    <string name="message_delete">Apakah anda yakin ingin menghapus item ini?</string>
+    <string name="added">Satu item berhasil ditambahkan</string>
+    <string name="changed">Satu item berhasil diubah</string>
+    <string name="deleted">Satu item berhasil dihapus</string>
+    <string name="adding">Tambahkan ke List Favorite</string>
+
+    <string-array name="avatar">
+        <item>@drawable/user1</item>
+        <item>@drawable/user2</item>
+        <item>@drawable/user3</item>
+        <item>@drawable/user4</item>
+        <item>@drawable/user5</item>
+        <item>@drawable/user6</item>
+        <item>@drawable/user7</item>
+        <item>@drawable/user8</item>
+        <item>@drawable/user9</item>
+        <item>@drawable/user10</item>
+        <item>@drawable/user11</item>
+        <item>@drawable/user12</item>
+    </string-array>
+
+    <string-array name="username">
+        <item>JakeWharton</item>
+        <item>amitshekhariitbhu</item>
+        <item>romainguy</item>
+        <item>chrisbanes</item>
+        <item>tipsy</item>
+        <item>ravi8x</item>
+        <item>jasoet</item>
+        <item>budioktaviyan</item>
+        <item>hendisantika</item>
+        <item>sidiqpermana</item>
+        <item>sadara</item>
+        <item>fabpot</item>
+    </string-array>
+
+    <string-array name="surename">
+        <item>Jake Wharton</item>
+        <item>Amit Shekhar</item>
+        <item>Romain Guy</item>
+        <item>Chris Banes</item>
+        <item>David</item>
+        <item>Ravi Tamada</item>
+        <item>Deny Prasetyo</item>
+        <item>Budi Oktaviyan</item>
+        <item>Hendi Santika</item>
+        <item>Sidiq Permana</item>
+        <item>Aji Sadara</item>
+        <item>Fabian Potencier</item>
+    </string-array>
+
+    <string-array name="location">
+        <item>Pittsburgh, PA, USA</item>
+        <item>New Delhi, India</item>
+        <item>California</item>
+        <item>Sydney, Australia</item>
+        <item>Trondheim, Norway</item>
+        <item>India</item>
+        <item>Kotagede, Yogyakarta, Indonesia</item>
+        <item>Jakarta, Indonesia</item>
+        <item>Bojongsoang, Bandung, Jawa Barat</item>
+        <item>Jakarta, Indonesia</item>
+        <item>Solo, Indonesia</item>
+        <item>San Fransisco, USA</item>
+    </string-array>
+
+    <integer-array name="repository">
+        <item>102</item>
+        <item>37</item>
+        <item>9</item>
+        <item>30</item>
+        <item>56</item>
+        <item>28</item>
+        <item>44</item>
+        <item>110</item>
+        <item>1064</item>
+        <item>65</item>
+        <item>19</item>
+        <item>57</item>
+    </integer-array>
+
+    <string-array name="company">
+        <item>Google, Inc.</item>
+        <item>MindOrksOpenSource</item>
+        <item>Google</item>
+        <item>Google working on @android</item>
+        <item>Working Group Two</item>
+        <item>AndroidHive | Droid5</item>
+        <item>gojek-engineering</item>
+        <item>KotlinID</item>
+        <item>JVMDeveloperID @KotlinID @IDDevOps</item>
+        <item>Nusantara Beta Studio</item>
+        <item>Nusa Konstruksi Enjiniring</item>
+        <item>Symfony/Blackfire</item>
+    </string-array>
+
+    <integer-array name="followers">
+        <item>56995</item>
+        <item>5153</item>
+        <item>7972</item>
+        <item>14725</item>
+        <item>788</item>
+        <item>18628</item>
+        <item>277</item>
+        <item>178</item>
+        <item>428</item>
+        <item>465</item>
+        <item>12</item>
+        <item>11900</item>
+    </integer-array>
+
+    <integer-array name="following">
+        <item>12</item>
+        <item>2</item>
+        <item>0</item>
+        <item>1</item>
+        <item>0</item>
+        <item>3</item>
+        <item>39</item>
+        <item>23</item>
+        <item>61</item>
+        <item>10</item>
+        <item>1</item>
+        <item>0</item>
+    </integer-array>
+
+    <string-array name="description">
+        <item>Announcement : If you find Android Arsenal useful and wouldn\'t mind to support the project, you can switch off AdBlock or similar software for watching a little bit ads. This simple gesture will help to develop and maintain the project.</item>
+        <item>I am a software engineer with a passion for sharing knowledge through open-source, blogs and videos. I have helped more than 2 million developers in excelling in their careers.</item>
+        <item>As some of you may know, Marakana runs the San Francisco Android User Group, and for our kick-off event we had Romain Guy from Google come and deliver his Google I/O talk: Turbo-charge your UI: How to Make your Android UI Fast and Efficient.</item>
+        <item>I work as an engineer in the Android Developer Relations team. This is my personal blog and any views expressed here are mine, and mine alone.</item>
+        <item>Creator of https://javalin.io (https://github.com/tipsy/javalin), yup..not much to say about</item>
+        <item>Once your app is live on playstore, app rating and reviews are very crusical factors to drive more downloads. To achieve this, we usually ask users to rate thr app by showing a dialog with couple of buttons and redirecting them to playstore. With this user experience, there are chances that user might not come back to our app once redirected to playstore. Also a novice user finds it difficult to rate the app on playstore.</item>
+        <item>Experienced Backend Software Engineer with a demonstrated history of working in the information technology, financial technology and services industry. Skilled in Kotlin, Vert.x, and JVM based Framework and Tools. Strong engineering professional with a Master of Computer Science focused in Computer Science from Universitas Gadjah Mada (UGM).</item>
+        <item>Howdy 👋🏻, I\'m Budi Oktaviyan. The only way to do a great work, is to love what you do. 🤷🏻‍♂️ Ask me anything about android, iOS and any mobile cross-platform frameworks https://budioktaviyan.github.io</item>
+        <item>I am a father and software developer. Love Coding, Software Development, Community Leader of @jvmdeveloperid, @KotlinID n @IDDevOps. https://linktr.ee/hendisantika</item>
+        <item>Saat ditanya apa yang paling membuatnya semangat, Sidiq menjawab simpel: \“Berbagi ilmu dan berkah untuk Indonesia.\” Visi besarnya, memajukan kualitas sumber daya manusia Indonesia di bidang teknologi informasi. Mengaku terinspirasi Narenda Wicaksono (CEO Dicoding) yang disebutnya \“Bapak kompor IT se-Indonesia\”, Sidiq terpanggil untuk fokus pada pengembangan Aplikasi Android. Google Developer Expert (GDE) in Android ini sudah terjun di industri IT sejak 2013.</item>
+        <item>Meskipun tanpa embel-embel IAI, namun bukan berarti aku tak mampu berarsitektur, merasa cukup dengan gelar ST dibelakang nama, tanpa ada imbuhan koma disusul MT atau M.Arch bahkan M.Eng.Arch, apalagi M.App. Acc. Meskipun tanpa lisensi resmi dari lembaga yang katanya lebih berwenang dan punya hak mencipta kreasi ruang dari lainnya bahkan apapun di dunia ini, tapi tidak lantas berhenti mencipta ruang dan merasakan meruang. https://sadarastudio.wordpress.com </item>
+        <item>Fabien discovered the Web in 1994, at a time when connecting to the Internet was still associated with the harmful strident sounds of a modem. Being a developer by passion, he immediately started to build websites with Perl. But with the release of PHP 5, he decided to switch focus to PHP, and created the symfony framework project in 2004 to help his company leverage the power of PHP for its customers. Fabien is a serial-entrepreneur, and among other companies.</item>
+    </string-array>
+
+</resources>

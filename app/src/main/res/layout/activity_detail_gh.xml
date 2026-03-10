@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:card_view="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:padding="8dp"
+    tools:context=".ui.detail.DetailUserGithubActivity">
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="8dp">
+
+        <de.hdodenhof.circleimageview.CircleImageView
+            android:id="@+id/iv_detail_photo"
+            style="@style/circleimage"
+            card_view:civ_border_color="@android:color/holo_green_dark"
+            card_view:civ_border_width="3dp"
+            card_view:layout_constraintEnd_toEndOf="parent"
+            card_view:layout_constraintStart_toStartOf="parent"
+            card_view:layout_constraintTop_toTopOf="parent"
+            tools:ignore="ContentDescription,ImageContrastCheck"
+            tools:src="@tools:sample/avatars" />
+
+        <TextView
+            android:id="@+id/tv_detail_id"
+            style="@style/TextDeskripsi"
+            android:text="@string/githubid"
+            android:textStyle="bold"
+            card_view:layout_constraintEnd_toEndOf="parent"
+            card_view:layout_constraintStart_toStartOf="parent"
+            card_view:layout_constraintTop_toBottomOf="@+id/iv_detail_photo" />
+
+        <TextView
+            android:id="@+id/tv_detail_name"
+            style="@style/TextDeskripsi"
+            card_view:layout_constraintEnd_toEndOf="parent"
+            card_view:layout_constraintStart_toStartOf="parent"
+            card_view:layout_constraintTop_toBottomOf="@+id/tv_detail_id"
+            tools:text="Nama Lengkap" />
+
+        <TextView
+            android:id="@+id/tv_detail_profile"
+            style="@style/TextDeskripsi"
+            android:text="@string/profil_lengkap"
+            card_view:layout_constraintEnd_toEndOf="parent"
+            card_view:layout_constraintStart_toStartOf="parent"
+            card_view:layout_constraintTop_toBottomOf="@+id/tv_detail_name" />
+
+        <TextView
+            android:id="@+id/tv_detail_description"
+            style="@style/TextDeskripsi"
+            android:text="@string/detail_deskripsi"
+            card_view:layout_constraintEnd_toEndOf="parent"
+            card_view:layout_constraintStart_toStartOf="parent"
+            card_view:layout_constraintTop_toBottomOf="@+id/tv_detail_profile" />
+
+        <ImageView
+            android:id="@+id/btnShare"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="40dp"
+            android:contentDescription="@string/tombolshare"
+            card_view:layout_constraintEnd_toEndOf="parent"
+            card_view:layout_constraintTop_toBottomOf="@+id/tv_detail_description"
+            card_view:srcCompat="@drawable/ic_baseline_share" />
+
+        <ImageView
+            android:id="@+id/btnLike"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="8dp"
+            android:contentDescription="@string/tombollike"
+            card_view:layout_constraintBottom_toBottomOf="@+id/btnShare"
+            card_view:layout_constraintEnd_toStartOf="@+id/textView2"
+            card_view:layout_constraintTop_toTopOf="@+id/btnShare"
+            card_view:layout_constraintVertical_bias="0.0"
+            card_view:srcCompat="@drawable/ic_baseline_thumb_up" />
+
+        <TextView
+            android:id="@+id/textView2"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:layout_marginEnd="8dp"
+            android:text="@string/like_share"
+            card_view:layout_constraintBottom_toBottomOf="@+id/btnShare"
+            card_view:layout_constraintEnd_toStartOf="@+id/btnShare"
+            card_view:layout_constraintTop_toTopOf="@+id/btnShare" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="2dp"
+            android:text="@string/develop_by_sadar_studio_2021"
+            android:textSize="12sp"
+            android:textStyle="italic"
+            card_view:layout_constraintBottom_toBottomOf="@+id/textView2"
+            card_view:layout_constraintStart_toStartOf="parent"
+            card_view:layout_constraintTop_toTopOf="@+id/textView2" />
+
+        <ImageView
+            android:layout_width="25dp"
+            android:layout_height="25dp"
+            android:layout_marginEnd="4dp"
+            android:contentDescription="@string/ghicon"
+            android:visibility="visible"
+            card_view:layout_constraintBottom_toBottomOf="@+id/tv_detail_id"
+            card_view:layout_constraintEnd_toStartOf="@+id/tv_detail_id"
+            card_view:layout_constraintTop_toTopOf="@+id/tv_detail_id"
+            card_view:srcCompat="@drawable/ic_icongithub"
+            tools:visibility="visible" />
+
+        <ImageView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="4dp"
+            android:contentDescription="@string/iconnama"
+            card_view:layout_constraintBottom_toBottomOf="@+id/tv_detail_name"
+            card_view:layout_constraintEnd_toStartOf="@+id/tv_detail_name"
+            card_view:layout_constraintTop_toTopOf="@+id/tv_detail_name"
+            card_view:srcCompat="@drawable/ic_baseline_contact_mail_24" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+</ScrollView>
