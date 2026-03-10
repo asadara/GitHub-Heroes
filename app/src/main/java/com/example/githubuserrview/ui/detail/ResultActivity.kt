@@ -1,30 +1,23 @@
 package com.example.githubuserrview.ui.detail
 
 import android.annotation.SuppressLint
-import android.app.SearchManager
 import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
 import android.content.pm.ActivityInfo
 import android.net.Uri
 import android.os.Bundle
-import android.view.Menu
-import android.view.MenuItem
 import android.view.View
 import android.widget.Toast
 import androidx.annotation.StringRes
 import androidx.appcompat.app.AppCompatActivity
-import androidx.appcompat.widget.SearchView
 import androidx.lifecycle.ViewModelProvider
 import androidx.viewpager2.widget.ViewPager2
 import com.bumptech.glide.Glide
-import com.example.githubuserrview.MyFavorites
 import com.example.githubuserrview.R
 import com.example.githubuserrview.adapter.SectionsPagerAdapter
 import com.example.githubuserrview.databinding.ActivityResultBinding
 import com.example.githubuserrview.response.DetailUserResponse
-import com.example.githubuserrview.ui.history.RecentSearchActivity
-import com.example.githubuserrview.ui.main.SearchActivity
 import com.google.android.material.tabs.TabLayout
 import com.google.android.material.tabs.TabLayoutMediator
 import kotlinx.coroutines.CoroutineScope
@@ -279,43 +272,9 @@ class ResultActivity : AppCompatActivity() {
         }
     }
 
-    override fun onCreateOptionsMenu(menu: Menu?): Boolean {
-        menuInflater.inflate(R.menu.search_menu, menu)
-        menu?.findItem(R.id.switch_theme)?.isVisible = false
-
-        val searchManager = getSystemService(Context.SEARCH_SERVICE) as SearchManager
-        val searchView = menu?.findItem(R.id.search)?.actionView as SearchView
-
-        searchView.setSearchableInfo(searchManager.getSearchableInfo(componentName))
-        searchView.queryHint = resources.getString(R.string.search_hint)
-
-        searchView.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
-            override fun onQueryTextSubmit(query: String?): Boolean {
-                startActivity(SearchActivity.createIntent(this@ResultActivity, query))
-                return true
-            }
-
-            override fun onQueryTextChange(newText: String?): Boolean = false
-        })
+    override fun onSupportNavigateUp(): Boolean {
+        finish()
         return true
-    }
-
-    override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        return when (item.itemId) {
-            android.R.id.home -> {
-                finish()
-                true
-            }
-            R.id.favorites -> {
-                startActivity(Intent(this, MyFavorites::class.java))
-                true
-            }
-            R.id.recent_searches -> {
-                startActivity(Intent(this, RecentSearchActivity::class.java))
-                true
-            }
-            else -> super.onOptionsItemSelected(item)
-        }
     }
 
     companion object {

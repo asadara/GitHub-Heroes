@@ -4,8 +4,35 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="@color/forest_50"
     android:padding="16dp"
     tools:context=".ui.history.RecentSearchActivity">
+
+    <TextView
+        android:id="@+id/tv_recent_title"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:text="@string/recent_searches"
+        android:textColor="@color/ink_900"
+        android:textSize="24sp"
+        android:textStyle="bold"
+        app:layout_constraintEnd_toStartOf="@id/btn_clear_recent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btn_clear_recent"
+        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/settings_clear_history"
+        app:cornerRadius="16dp"
+        app:icon="@drawable/ic_clear"
+        app:iconTint="@color/forest_700"
+        app:layout_constraintBottom_toBottomOf="@id/tv_recent_title"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="@id/tv_recent_title"
+        app:strokeColor="@color/forest_300" />
 
     <TextView
         android:id="@+id/tv_empty_recent"
@@ -13,22 +40,24 @@
         android:layout_height="wrap_content"
         android:gravity="center"
         android:text="@string/recent_searches_empty"
+        android:textColor="@color/ink_600"
         android:textSize="16sp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/tv_recent_title"
         tools:visibility="visible" />
 
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/recycler_view_recent"
         android:layout_width="0dp"
         android:layout_height="0dp"
+        android:layout_marginTop="16dp"
         android:clipToPadding="false"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/tv_recent_title"
         tools:listitem="@layout/item_recent_search" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

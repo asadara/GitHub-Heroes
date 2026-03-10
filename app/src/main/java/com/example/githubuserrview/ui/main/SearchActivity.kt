@@ -5,9 +5,8 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.ActivityInfo
 import android.os.Bundle
-import android.view.Menu
-import android.view.MenuItem
 import android.view.View
+import android.view.inputmethod.EditorInfo
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.ViewModelProvider
@@ -17,6 +16,7 @@ import com.example.githubuserrview.R
 import com.example.githubuserrview.data.model.User
 import com.example.githubuserrview.data.repository.GithubRepositoryProvider
 import com.example.githubuserrview.databinding.ActivitySearchBinding
+import com.example.githubuserrview.navigation.BottomNavHelper
 import com.example.githubuserrview.settings.RecentSearchPreferences
 import com.example.githubuserrview.settings.appDataStore
 import com.example.githubuserrview.ui.history.RecentSearchActivity
@@ -34,7 +34,6 @@ class SearchActivity : AppCompatActivity() {
         binding = ActivitySearchBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        supportActionBar?.setDisplayHomeAsUpEnabled(true)
         supportActionBar?.title = getString(R.string.bar_title_search)
 
         adapter = UserAdapter()
@@ -56,6 +55,20 @@ class SearchActivity : AppCompatActivity() {
             recyclerViewRetro.setHasFixedSize(true)
             recyclerViewRetro.adapter = adapter
             lottieNotFound.visibility = View.GONE
+            btnRecentSearches.setOnClickListener {
+                startActivity(Intent(this@SearchActivity, RecentSearchActivity::class.java))
+            }
+            btnSearch.setOnClickListener {
+                submitSearch()
+            }
+            etSearch.setOnEditorActionListener { _, actionId, _ ->
+                if (actionId == EditorInfo.IME_ACTION_SEARCH) {
+                    submitSearch()
+                    true
+                } else {
+                    false
+                }
+            }
         }
 
         viewModel.getSearchUser().observe(this) {
@@ -78,54 +91,47 @@ class SearchActivity : AppCompatActivity() {
         //saya rasa orientasi terbaik untuk design apk ini adalah orientasi portrait, so i made this one
         this.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
 
+        BottomNavHelper.setup(this, binding.bottomNav.bottomNav, R.id.nav_search)
         searchUser()
     }
 
-    override fun onCreateOptionsMenu(menu: Menu): Boolean {
-        menuInflater.inflate(R.menu.search_menu, menu)
-        menu.findItem(R.id.search).isVisible = false
-        menu.findItem(R.id.switch_theme).isVisible = false
-        return true
-    }
-
-    override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        return when (item.itemId) {
-            android.R.id.home -> {
-                finish()
-                true
-            }
-            R.id.favorites -> {
-                startActivity(Intent(this, MyFavorites::class.java))
-                true
-            }
-            R.id.recent_searches -> {
-                startActivity(Intent(this, RecentSearchActivity::class.java))
-                true
-            }
-            else -> super.onOptionsItemSelected(item)
-        }
-    }
-
     private fun searchUser() {
-        binding.apply {
-            val query = intent.getStringExtra(EXTRA_USER)?.trim()
+        val query = intent.getStringExtra(EXTRA_USER)?.trim()
 
-            if (query.isNullOrBlank()) {
-                searchFor.text = getString(R.string.search_result_for)
-                showLoading(false)
-                showEmptyState(true)
-                Toast.makeText(
-                    this@SearchActivity,
-                    getString(R.string.search_error_empty_query),
-                    Toast.LENGTH_SHORT
-                ).show()
-                return
-            }
+        binding.etSearch.setText(query.orEmpty())
 
-            searchFor.text = getString(R.string.tv_search_for, query)
+        if (query.isNullOrBlank()) {
+            binding.searchFor.text = getString(R.string.search_idle_title)
+            showLoading(false)
             showEmptyState(false)
-            viewModel.setSearchUsers(query)
+            adapter.setList(arrayListOf())
+            return
         }
+
+        runSearch(query)
+    }
+
+    private fun submitSearch() {
+        val query = binding.etSearch.text?.toString()?.trim().orEmpty()
+        if (query.isBlank()) {
+            binding.searchFor.text = getString(R.string.search_idle_title)
+            showLoading(false)
+            showEmptyState(false)
+            Toast.makeText(
+                this,
+                getString(R.string.search_error_empty_query),
+                Toast.LENGTH_SHORT
+            ).show()
+            return
+        }
+
+        runSearch(query)
+    }
+
+    private fun runSearch(query: String) {
+        binding.searchFor.text = getString(R.string.tv_search_for, query)
+        showEmptyState(false)
+        viewModel.setSearchUsers(query)
     }
 
     private fun openResult(data: User) {

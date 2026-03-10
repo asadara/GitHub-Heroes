@@ -4,26 +4,69 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="@color/forest_50"
     tools:context=".MyFavorites">
+
+    <TextView
+        android:id="@+id/tv_favorites_title"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="16dp"
+        android:layout_marginTop="16dp"
+        android:layout_marginEnd="16dp"
+        android:text="@string/bar_title_fav"
+        android:textColor="@color/ink_900"
+        android:textSize="24sp"
+        android:textStyle="bold"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <TextView
+        android:id="@+id/tv_favorites_hint"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="16dp"
+        android:layout_marginTop="6dp"
+        android:layout_marginEnd="16dp"
+        android:text="@string/favorites_hint"
+        android:textColor="@color/ink_600"
+        android:textSize="14sp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/tv_favorites_title" />
+
+    <TextView
+        android:id="@+id/tv_empty_favorites"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:text="@string/favorites_empty"
+        android:textColor="@color/ink_600"
+        android:textSize="16sp"
+        app:layout_constraintBottom_toTopOf="@id/bottom_nav"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/tv_favorites_hint"
+        tools:visibility="visible" />
 
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/rv_favorite"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:clipToPadding="false"
+        android:paddingTop="8dp"
+        app:layout_constraintBottom_toTopOf="@id/bottom_nav"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/tv_favorites_hint"
         tools:listitem="@layout/search_item" />
 
-    <com.google.android.material.floatingactionbutton.FloatingActionButton
-        android:id="@+id/fab_add"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_margin="16dp"
-        android:contentDescription="@string/adding"
-        app:fabSize="normal"
-        app:layout_anchor="@id/rv_favorite"
-        app:layout_anchorGravity="bottom|end"
-        app:layout_constraintBottom_toBottomOf="@+id/rv_favorite"
+    <include
+        android:id="@+id/bottom_nav"
+        layout="@layout/include_bottom_nav"
+        app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:srcCompat="@drawable/ic_add"
-        tools:ignore="ImageContrastCheck" />
+        app:layout_constraintStart_toStartOf="parent" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

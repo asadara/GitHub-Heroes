@@ -2,7 +2,6 @@ package com.example.githubuserrview
 
 import android.content.res.Configuration
 import android.os.Bundle
-import android.view.MenuItem
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.GridLayoutManager
@@ -11,6 +10,7 @@ import com.example.githubuserrview.data.local.FavoriteUser
 import com.example.githubuserrview.data.model.User
 import com.example.githubuserrview.databinding.ActivityMyFavoritesBinding
 import com.example.githubuserrview.model.FavoriteViewModel
+import com.example.githubuserrview.navigation.BottomNavHelper
 import com.example.githubuserrview.ui.detail.ResultActivity
 import com.example.githubuserrview.ui.main.UserAdapter
 
@@ -25,7 +25,6 @@ class MyFavorites : AppCompatActivity() {
         binding = ActivityMyFavoritesBinding.inflate(layoutInflater)
         setContentView(binding.root)
         supportActionBar?.title = getString(R.string.bar_title_fav)
-        supportActionBar?.setDisplayHomeAsUpEnabled(true)
 
         adapter = UserAdapter()
         viewModel = ViewModelProvider(this)[FavoriteViewModel::class.java]
@@ -46,9 +45,12 @@ class MyFavorites : AppCompatActivity() {
         }
 
         viewModel.getFavoriteUser().observe(this) {
-            adapter.setList(mapList(it))
+            val favorites = mapList(it)
+            adapter.setList(favorites)
+            binding.tvEmptyFavorites.visibility = if (favorites.isEmpty()) android.view.View.VISIBLE else android.view.View.GONE
         }
 
+        BottomNavHelper.setup(this, binding.bottomNav.bottomNav, R.id.nav_favorites)
     }
 
     private fun mapList(users: List<FavoriteUser>): ArrayList<User> {
@@ -73,15 +75,5 @@ class MyFavorites : AppCompatActivity() {
                 data.avatar_url
             )
         )
-    }
-
-    override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        when (item.itemId) {
-            android.R.id.home -> {
-                finish()
-                return true
-            }
-        }
-        return super.onOptionsItemSelected(item)
     }
 }
