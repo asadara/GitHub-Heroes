@@ -7,6 +7,7 @@ import android.content.pm.ActivityInfo
 import android.os.Bundle
 import android.view.View
 import android.view.inputmethod.EditorInfo
+import android.view.inputmethod.InputMethodManager
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.ViewModelProvider
@@ -17,8 +18,11 @@ import com.example.githubuserrview.data.model.User
 import com.example.githubuserrview.data.repository.GithubRepositoryProvider
 import com.example.githubuserrview.databinding.ActivitySearchBinding
 import com.example.githubuserrview.navigation.BottomNavHelper
+import com.example.githubuserrview.settings.AppThemeManager
 import com.example.githubuserrview.settings.RecentSearchPreferences
 import com.example.githubuserrview.settings.appDataStore
+import com.example.githubuserrview.ui.common.AppHeader
+import com.example.githubuserrview.ui.common.AppNavigator
 import com.example.githubuserrview.ui.history.RecentSearchActivity
 import com.example.githubuserrview.ui.detail.ResultActivity
 
@@ -30,11 +34,16 @@ class SearchActivity : AppCompatActivity() {
 
     @SuppressLint("SourceLockedOrientationActivity")
     override fun onCreate(savedInstanceState: Bundle?) {
+        AppThemeManager.apply(this)
         super.onCreate(savedInstanceState)
         binding = ActivitySearchBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        supportActionBar?.title = getString(R.string.bar_title_search)
+        AppHeader.apply(
+            this,
+            R.string.bar_title_search,
+            R.string.header_search_subtitle
+        )
 
         adapter = UserAdapter()
         adapter.setOnItemClickCallback(object : UserAdapter.OnItemClickCallback{
@@ -55,11 +64,21 @@ class SearchActivity : AppCompatActivity() {
             recyclerViewRetro.setHasFixedSize(true)
             recyclerViewRetro.adapter = adapter
             lottieNotFound.visibility = View.GONE
+            layoutSearchPagination.visibility = View.GONE
             btnRecentSearches.setOnClickListener {
-                startActivity(Intent(this@SearchActivity, RecentSearchActivity::class.java))
+                AppNavigator.open(
+                    this@SearchActivity,
+                    Intent(this@SearchActivity, RecentSearchActivity::class.java)
+                )
             }
             btnSearch.setOnClickListener {
                 submitSearch()
+            }
+            btnPrevPage.setOnClickListener {
+                viewModel.loadPreviousPage()
+            }
+            btnNextPage.setOnClickListener {
+                viewModel.loadNextPage()
             }
             etSearch.setOnEditorActionListener { _, actionId, _ ->
                 if (actionId == EditorInfo.IME_ACTION_SEARCH) {
@@ -76,6 +95,8 @@ class SearchActivity : AppCompatActivity() {
             adapter.setList(users)
             showEmptyState(users.isEmpty())
         }
+
+        viewModel.getPaginationState().observe(this, ::renderPagination)
 
         viewModel.getLoadingState().observe(this) {
             showLoading(it)
@@ -102,8 +123,10 @@ class SearchActivity : AppCompatActivity() {
 
         if (query.isNullOrBlank()) {
             binding.searchFor.text = getString(R.string.search_idle_title)
+            binding.tvSearchResultMeta.text = getString(R.string.search_result_idle_meta)
             showLoading(false)
             showEmptyState(false)
+            renderPagination(SearchPaginationState())
             adapter.setList(arrayListOf())
             return
         }
@@ -115,6 +138,7 @@ class SearchActivity : AppCompatActivity() {
         val query = binding.etSearch.text?.toString()?.trim().orEmpty()
         if (query.isBlank()) {
             binding.searchFor.text = getString(R.string.search_idle_title)
+            binding.tvSearchResultMeta.text = getString(R.string.search_result_idle_meta)
             showLoading(false)
             showEmptyState(false)
             Toast.makeText(
@@ -125,17 +149,20 @@ class SearchActivity : AppCompatActivity() {
             return
         }
 
+        hideKeyboard()
         runSearch(query)
     }
 
     private fun runSearch(query: String) {
         binding.searchFor.text = getString(R.string.tv_search_for, query)
+        binding.tvSearchResultMeta.text = getString(R.string.search_result_loading_meta)
         showEmptyState(false)
         viewModel.setSearchUsers(query)
     }
 
     private fun openResult(data: User) {
-        startActivity(
+        AppNavigator.open(
+            this,
             ResultActivity.createIntent(
                 this,
                 data.login,
@@ -146,12 +173,61 @@ class SearchActivity : AppCompatActivity() {
     }
 
     private fun showLoading(isLoading: Boolean) {
-        binding.lottie.visibility = if (isLoading) View.VISIBLE else View.GONE
+        if (isLoading) {
+            binding.cardSearchLoading.visibility = View.VISIBLE
+            binding.cardSearchLoading.bringToFront()
+            binding.recyclerViewRetro.visibility = View.INVISIBLE
+            binding.layoutSearchPagination.visibility = View.INVISIBLE
+            return
+        }
+
+        binding.cardSearchLoading.visibility = View.GONE
+        binding.recyclerViewRetro.visibility =
+            if (binding.lottieNotFound.visibility == View.VISIBLE) View.GONE else View.VISIBLE
+        renderPagination(viewModel.getPaginationState().value ?: SearchPaginationState())
     }
 
     private fun showEmptyState(isEmpty: Boolean) {
         binding.lottieNotFound.visibility = if (isEmpty) View.VISIBLE else View.GONE
         binding.recyclerViewRetro.visibility = if (isEmpty) View.GONE else View.VISIBLE
+    }
+
+    private fun renderPagination(state: SearchPaginationState) {
+        val startIndex = if (state.totalCount == 0 || state.shownCount == 0) {
+            0
+        } else {
+            ((state.currentPage - 1) * state.pageSize) + 1
+        }
+        val endIndex = if (state.totalCount == 0 || state.shownCount == 0) {
+            0
+        } else {
+            startIndex + state.shownCount - 1
+        }
+
+        binding.tvSearchResultMeta.text = if (state.totalCount == 0) {
+            getString(R.string.search_result_empty_meta)
+        } else {
+            getString(R.string.search_result_meta_format, state.totalCount, startIndex, endIndex)
+        }
+
+        binding.layoutSearchPagination.visibility =
+            if (state.totalCount > state.pageSize) View.VISIBLE else View.GONE
+        binding.btnPrevPage.isEnabled = state.hasPreviousPage
+        binding.btnNextPage.isEnabled = state.hasNextPage
+        binding.btnPrevPage.alpha = if (state.hasPreviousPage) 1f else 0.55f
+        binding.btnNextPage.alpha = if (state.hasNextPage) 1f else 0.55f
+        binding.tvPageIndicator.text = getString(
+            R.string.search_page_indicator,
+            state.currentPage
+        )
+    }
+
+    private fun hideKeyboard() {
+        binding.etSearch.clearFocus()
+        binding.etSearch.post {
+            val imm = getSystemService(INPUT_METHOD_SERVICE) as? InputMethodManager
+            imm?.hideSoftInputFromWindow(binding.etSearch.windowToken, 0)
+        }
     }
 
     companion object {

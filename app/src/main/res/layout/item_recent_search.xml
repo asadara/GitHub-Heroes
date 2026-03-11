@@ -4,6 +4,7 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:layout_marginBottom="12dp"
+    app:cardBackgroundColor="?attr/appSurfaceCard"
     app:cardCornerRadius="12dp"
     app:cardUseCompatPadding="true">
 
@@ -18,6 +19,7 @@
             android:layout_width="20dp"
             android:layout_height="20dp"
             android:contentDescription="@string/search_menu"
+            android:tint="?attr/colorPrimary"
             android:src="@drawable/ic_baseline_search_24" />
 
         <TextView
@@ -26,6 +28,7 @@
             android:layout_height="wrap_content"
             android:layout_marginStart="12dp"
             android:layout_weight="1"
+            android:textColor="?attr/appTextPrimary"
             android:textSize="16sp"
             android:textStyle="bold" />
     </LinearLayout>

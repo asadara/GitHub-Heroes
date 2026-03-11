@@ -11,6 +11,9 @@ import com.example.githubuserrview.data.model.User
 import com.example.githubuserrview.databinding.ActivityMyFavoritesBinding
 import com.example.githubuserrview.model.FavoriteViewModel
 import com.example.githubuserrview.navigation.BottomNavHelper
+import com.example.githubuserrview.settings.AppThemeManager
+import com.example.githubuserrview.ui.common.AppHeader
+import com.example.githubuserrview.ui.common.AppNavigator
 import com.example.githubuserrview.ui.detail.ResultActivity
 import com.example.githubuserrview.ui.main.UserAdapter
 
@@ -21,10 +24,15 @@ class MyFavorites : AppCompatActivity() {
     private lateinit var viewModel: FavoriteViewModel
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        AppThemeManager.apply(this)
         super.onCreate(savedInstanceState)
         binding = ActivityMyFavoritesBinding.inflate(layoutInflater)
         setContentView(binding.root)
-        supportActionBar?.title = getString(R.string.bar_title_fav)
+        AppHeader.apply(
+            this,
+            R.string.bar_title_fav,
+            R.string.header_favorites_subtitle
+        )
 
         adapter = UserAdapter()
         viewModel = ViewModelProvider(this)[FavoriteViewModel::class.java]
@@ -67,7 +75,8 @@ class MyFavorites : AppCompatActivity() {
     }
 
     private fun openResult(data: User) {
-        startActivity(
+        AppNavigator.open(
+            this,
             ResultActivity.createIntent(
                 this,
                 data.login,

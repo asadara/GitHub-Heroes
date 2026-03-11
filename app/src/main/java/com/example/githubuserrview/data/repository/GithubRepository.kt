@@ -15,10 +15,19 @@ class GithubRepository(
     private val apiService: ApiService = ApiConfig.getApiService()
 ) {
 
-    suspend fun searchUsers(query: String): NetworkResult<List<User>> {
+    suspend fun searchUsers(query: String, page: Int, perPage: Int): NetworkResult<SearchUsersPage> {
         return runRequest(
-            call = apiService.getSearchUsers(query),
-            successBody = { response -> response.body()?.items ?: emptyList() },
+            call = apiService.getSearchUsers(query, page, perPage),
+            successBody = { response ->
+                response.body()?.let {
+                    SearchUsersPage(
+                        totalCount = it.totalCount,
+                        items = it.items,
+                        page = page,
+                        perPage = perPage
+                    )
+                }
+            },
             defaultError = "Gagal memuat hasil pencarian."
         )
     }

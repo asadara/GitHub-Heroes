@@ -8,7 +8,10 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.githubuserrview.R
 import com.example.githubuserrview.databinding.ActivityRecentSearchBinding
 import com.example.githubuserrview.settings.RecentSearchPreferences
+import com.example.githubuserrview.settings.AppThemeManager
 import com.example.githubuserrview.settings.appDataStore
+import com.example.githubuserrview.ui.common.AppHeader
+import com.example.githubuserrview.ui.common.AppNavigator
 import com.example.githubuserrview.ui.main.SearchActivity
 
 class RecentSearchActivity : AppCompatActivity() {
@@ -18,14 +21,20 @@ class RecentSearchActivity : AppCompatActivity() {
     private lateinit var viewModel: RecentSearchViewModel
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        AppThemeManager.apply(this)
         super.onCreate(savedInstanceState)
         binding = ActivityRecentSearchBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        supportActionBar?.title = getString(R.string.recent_searches)
+        AppHeader.apply(
+            this,
+            R.string.recent_searches,
+            R.string.header_recent_subtitle,
+            showBack = true
+        )
 
         adapter = RecentSearchAdapter { query ->
-            startActivity(SearchActivity.createIntent(this, query))
+            AppNavigator.open(this, SearchActivity.createIntent(this, query))
         }
 
         binding.recyclerViewRecent.apply {
@@ -49,5 +58,10 @@ class RecentSearchActivity : AppCompatActivity() {
         binding.btnClearRecent.setOnClickListener {
             viewModel.clearHistory()
         }
+    }
+
+    override fun onSupportNavigateUp(): Boolean {
+        AppNavigator.finish(this)
+        return true
     }
 }

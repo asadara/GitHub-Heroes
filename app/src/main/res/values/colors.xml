@@ -18,4 +18,55 @@
     <color name="ink_600">#5D6572</color>
     <color name="surface_card">#FCFEFC</color>
     <color name="surface_tint">#EDF6F0</color>
+    <color name="rose_500">#E85D75</color>
+    <color name="theme_forest_primary">#2D6F4A</color>
+    <color name="theme_forest_primary_dark">#173727</color>
+    <color name="theme_forest_secondary">#F3E9D7</color>
+    <color name="theme_forest_secondary_alt">#8DBB9E</color>
+    <color name="theme_forest_bg">#F4F8F5</color>
+    <color name="theme_forest_card">#FCFEFC</color>
+    <color name="theme_forest_tint">#EDF6F0</color>
+    <color name="theme_forest_stroke">#DDEEE4</color>
+    <color name="theme_forest_text_primary">#1C222B</color>
+    <color name="theme_forest_text_secondary">#5D6572</color>
+
+    <color name="theme_ocean_primary">#1E5B88</color>
+    <color name="theme_ocean_primary_dark">#143754</color>
+    <color name="theme_ocean_secondary">#E5F0FA</color>
+    <color name="theme_ocean_secondary_alt">#7AAFD8</color>
+    <color name="theme_ocean_bg">#F3F8FC</color>
+    <color name="theme_ocean_card">#FCFEFF</color>
+    <color name="theme_ocean_tint">#EAF3FA</color>
+    <color name="theme_ocean_stroke">#D6E6F2</color>
+    <color name="theme_ocean_text_primary">#17212A</color>
+    <color name="theme_ocean_text_secondary">#5A6976</color>
+
+    <color name="theme_terracotta_primary">#A64B2A</color>
+    <color name="theme_terracotta_primary_dark">#5B2618</color>
+    <color name="theme_terracotta_secondary">#F7E4DA</color>
+    <color name="theme_terracotta_secondary_alt">#D59274</color>
+    <color name="theme_terracotta_bg">#FCF6F2</color>
+    <color name="theme_terracotta_card">#FFFCFA</color>
+    <color name="theme_terracotta_tint">#F8ECE5</color>
+    <color name="theme_terracotta_stroke">#EFD7CD</color>
+    <color name="theme_terracotta_text_primary">#281C19</color>
+    <color name="theme_terracotta_text_secondary">#6C5A54</color>
+
+    <color name="theme_slate_primary">#475569</color>
+    <color name="theme_slate_primary_dark">#1F2937</color>
+    <color name="theme_slate_secondary">#E7ECF3</color>
+    <color name="theme_slate_secondary_alt">#A7B4C5</color>
+    <color name="theme_slate_bg">#F5F7FA</color>
+    <color name="theme_slate_card">#FCFCFD</color>
+    <color name="theme_slate_tint">#EEF2F7</color>
+    <color name="theme_slate_stroke">#DDE4EE</color>
+    <color name="theme_slate_text_primary">#1B2430</color>
+    <color name="theme_slate_text_secondary">#607080</color>
+
+    <color name="theme_dark_bg">#10161A</color>
+    <color name="theme_dark_card">#172028</color>
+    <color name="theme_dark_tint">#1E2933</color>
+    <color name="theme_dark_stroke">#263341</color>
+    <color name="theme_dark_text_primary">#F3F7FB</color>
+    <color name="theme_dark_text_secondary">#B7C4D0</color>
 </resources>

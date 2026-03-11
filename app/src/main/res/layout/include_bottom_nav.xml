@@ -4,9 +4,9 @@
     android:id="@+id/bottom_nav"
     android:layout_width="0dp"
     android:layout_height="wrap_content"
-    android:background="@color/surface_card"
-    app:itemIconTint="@color/forest_700"
-    app:itemRippleColor="@color/forest_100"
-    app:itemTextColor="@color/forest_700"
+    android:background="?attr/appSurfaceCard"
+    app:itemIconTint="@color/bottom_nav_item_colors"
+    app:itemRippleColor="@color/bottom_nav_ripple"
+    app:itemTextColor="@color/bottom_nav_item_colors"
     app:labelVisibilityMode="labeled"
     app:menu="@menu/bottom_nav_menu" />

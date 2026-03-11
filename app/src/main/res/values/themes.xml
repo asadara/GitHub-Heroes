@@ -1,17 +1,86 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <!-- Base application theme. -->
-    <style name="Theme.GitHubUserRview" parent="Theme.MaterialComponents.DayNight.DarkActionBar">
-        <!-- Primary brand color. -->
-        <item name="colorPrimary">@color/forest_700</item>
-        <item name="colorPrimaryVariant">@color/forest_900</item>
-        <item name="colorOnPrimary">@color/white</item>
-        <!-- Secondary brand color. -->
-        <item name="colorSecondary">@color/sand_100</item>
-        <item name="colorSecondaryVariant">@color/forest_300</item>
-        <item name="colorOnSecondary">@color/black</item>
-        <!-- Status bar color. -->
+    <style name="Theme.GitHubUserRview" parent="Theme.GitHubUserRview.Forest" />
+
+    <style name="Theme.GitHubUserRview.Base" parent="Theme.MaterialComponents.DayNight.DarkActionBar">
         <item name="android:statusBarColor" tools:targetApi="l">?attr/colorPrimaryVariant</item>
-        <!-- Customize your theme here. -->
+        <item name="actionBarStyle">@style/Widget_GitHubUserRview_ActionBar</item>
+        <item name="android:windowAnimationStyle">@style/Animation_GitHubUserRview_Window</item>
+    </style>
+
+    <style name="Theme.GitHubUserRview.Forest" parent="Theme.GitHubUserRview.Base">
+        <item name="colorPrimary">@color/theme_forest_primary</item>
+        <item name="colorPrimaryVariant">@color/theme_forest_primary_dark</item>
+        <item name="colorOnPrimary">@color/white</item>
+        <item name="colorSecondary">@color/theme_forest_secondary</item>
+        <item name="colorSecondaryVariant">@color/theme_forest_secondary_alt</item>
+        <item name="colorOnSecondary">@color/black</item>
+        <item name="appBackground">@color/theme_forest_bg</item>
+        <item name="appSurfaceCard">@color/theme_forest_card</item>
+        <item name="appSurfaceTint">@color/theme_forest_tint</item>
+        <item name="appStrokeColor">@color/theme_forest_stroke</item>
+        <item name="appTextPrimary">@color/theme_forest_text_primary</item>
+        <item name="appTextSecondary">@color/theme_forest_text_secondary</item>
+        <item name="appChipBackground">@color/theme_forest_tint</item>
+        <item name="appChipStrokeColor">@color/theme_forest_secondary_alt</item>
+        <item name="appChipTextColor">@color/theme_forest_primary</item>
+        <item name="appHeaderSubtitleColor">@color/theme_forest_secondary</item>
+    </style>
+
+    <style name="Theme.GitHubUserRview.Ocean" parent="Theme.GitHubUserRview.Base">
+        <item name="colorPrimary">@color/theme_ocean_primary</item>
+        <item name="colorPrimaryVariant">@color/theme_ocean_primary_dark</item>
+        <item name="colorOnPrimary">@color/white</item>
+        <item name="colorSecondary">@color/theme_ocean_secondary</item>
+        <item name="colorSecondaryVariant">@color/theme_ocean_secondary_alt</item>
+        <item name="colorOnSecondary">@color/black</item>
+        <item name="appBackground">@color/theme_ocean_bg</item>
+        <item name="appSurfaceCard">@color/theme_ocean_card</item>
+        <item name="appSurfaceTint">@color/theme_ocean_tint</item>
+        <item name="appStrokeColor">@color/theme_ocean_stroke</item>
+        <item name="appTextPrimary">@color/theme_ocean_text_primary</item>
+        <item name="appTextSecondary">@color/theme_ocean_text_secondary</item>
+        <item name="appChipBackground">@color/theme_ocean_tint</item>
+        <item name="appChipStrokeColor">@color/theme_ocean_secondary_alt</item>
+        <item name="appChipTextColor">@color/theme_ocean_primary</item>
+        <item name="appHeaderSubtitleColor">@color/theme_ocean_secondary</item>
+    </style>
+
+    <style name="Theme.GitHubUserRview.Terracotta" parent="Theme.GitHubUserRview.Base">
+        <item name="colorPrimary">@color/theme_terracotta_primary</item>
+        <item name="colorPrimaryVariant">@color/theme_terracotta_primary_dark</item>
+        <item name="colorOnPrimary">@color/white</item>
+        <item name="colorSecondary">@color/theme_terracotta_secondary</item>
+        <item name="colorSecondaryVariant">@color/theme_terracotta_secondary_alt</item>
+        <item name="colorOnSecondary">@color/black</item>
+        <item name="appBackground">@color/theme_terracotta_bg</item>
+        <item name="appSurfaceCard">@color/theme_terracotta_card</item>
+        <item name="appSurfaceTint">@color/theme_terracotta_tint</item>
+        <item name="appStrokeColor">@color/theme_terracotta_stroke</item>
+        <item name="appTextPrimary">@color/theme_terracotta_text_primary</item>
+        <item name="appTextSecondary">@color/theme_terracotta_text_secondary</item>
+        <item name="appChipBackground">@color/theme_terracotta_tint</item>
+        <item name="appChipStrokeColor">@color/theme_terracotta_secondary_alt</item>
+        <item name="appChipTextColor">@color/theme_terracotta_primary</item>
+        <item name="appHeaderSubtitleColor">@color/theme_terracotta_secondary</item>
+    </style>
+
+    <style name="Theme.GitHubUserRview.Slate" parent="Theme.GitHubUserRview.Base">
+        <item name="colorPrimary">@color/theme_slate_primary</item>
+        <item name="colorPrimaryVariant">@color/theme_slate_primary_dark</item>
+        <item name="colorOnPrimary">@color/white</item>
+        <item name="colorSecondary">@color/theme_slate_secondary</item>
+        <item name="colorSecondaryVariant">@color/theme_slate_secondary_alt</item>
+        <item name="colorOnSecondary">@color/black</item>
+        <item name="appBackground">@color/theme_slate_bg</item>
+        <item name="appSurfaceCard">@color/theme_slate_card</item>
+        <item name="appSurfaceTint">@color/theme_slate_tint</item>
+        <item name="appStrokeColor">@color/theme_slate_stroke</item>
+        <item name="appTextPrimary">@color/theme_slate_text_primary</item>
+        <item name="appTextSecondary">@color/theme_slate_text_secondary</item>
+        <item name="appChipBackground">@color/theme_slate_tint</item>
+        <item name="appChipStrokeColor">@color/theme_slate_secondary_alt</item>
+        <item name="appChipTextColor">@color/theme_slate_primary</item>
+        <item name="appHeaderSubtitleColor">@color/theme_slate_secondary</item>
     </style>
 
     <style name="TemaSplashSreen" parent="Theme.MaterialComponents.Light.NoActionBar">
@@ -25,7 +94,7 @@
         <item name="android:layout_marginTop">8dp</item>
         <item name="android:textAlignment">center</item>
         <item name="android:textSize">16sp</item>
-        <item name="android:textColor">@color/ink_900</item>
+        <item name="android:textColor">?attr/appTextPrimary</item>
     </style>
 
     <style name="circleimage">
@@ -36,4 +105,30 @@
         <item name="android:layout_marginEnd">8dp</item>
     </style>
 
+    <style name="Widget_GitHubUserRview_ActionBar" parent="Widget.AppCompat.ActionBar">
+        <item name="background">?attr/colorPrimary</item>
+        <item name="titleTextStyle">@style/TextAppearance_GitHubUserRview_ActionBar_Title</item>
+        <item name="subtitleTextStyle">@style/TextAppearance_GitHubUserRview_ActionBar_Subtitle</item>
+        <item name="elevation">0dp</item>
+    </style>
+
+    <style name="TextAppearance_GitHubUserRview_ActionBar_Title" parent="TextAppearance.AppCompat.Widget.ActionBar.Title">
+        <item name="android:textSize">22sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+        <item name="android:textColor">?attr/colorOnPrimary</item>
+    </style>
+
+    <style name="TextAppearance_GitHubUserRview_ActionBar_Subtitle" parent="TextAppearance.AppCompat.Widget.ActionBar.Subtitle">
+        <item name="android:textSize">12sp</item>
+        <item name="android:fontFamily">sans-serif</item>
+        <item name="android:textColor">?attr/appHeaderSubtitleColor</item>
+    </style>
+
+    <style name="Animation_GitHubUserRview_Window">
+        <item name="android:activityOpenEnterAnimation">@anim/screen_enter</item>
+        <item name="android:activityOpenExitAnimation">@anim/screen_exit</item>
+        <item name="android:activityCloseEnterAnimation">@anim/screen_pop_enter</item>
+        <item name="android:activityCloseExitAnimation">@anim/screen_pop_exit</item>
+    </style>
 </resources>

@@ -5,8 +5,10 @@ import androidx.appcompat.app.AppCompatActivity
 import com.example.githubuserrview.MainActivity
 import com.example.githubuserrview.MyFavorites
 import com.example.githubuserrview.R
+import com.example.githubuserrview.settings.ActiveProfileStore
+import com.example.githubuserrview.ui.common.AppNavigator
+import com.example.githubuserrview.ui.detail.ResultActivity
 import com.example.githubuserrview.ui.main.SearchActivity
-import com.example.githubuserrview.ui.profile.ProfileActivity
 import com.example.githubuserrview.ui.settings.SettingsActivity
 import com.google.android.material.bottomnavigation.BottomNavigationView
 
@@ -25,7 +27,10 @@ object BottomNavHelper {
 
             val intent = when (item.itemId) {
                 R.id.nav_home -> Intent(activity, MainActivity::class.java)
-                R.id.nav_profile -> Intent(activity, ProfileActivity::class.java)
+                R.id.nav_profile -> ResultActivity.createIntent(
+                    activity,
+                    ActiveProfileStore.get(activity)
+                )
                 R.id.nav_favorites -> Intent(activity, MyFavorites::class.java)
                 R.id.nav_search -> SearchActivity.createIntent(activity, null)
                 R.id.nav_settings -> Intent(activity, SettingsActivity::class.java)
@@ -34,10 +39,7 @@ object BottomNavHelper {
 
             intent?.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
             if (intent != null) {
-                activity.startActivity(intent)
-                if (selectedItemId != R.id.nav_home) {
-                    activity.overridePendingTransition(0, 0)
-                }
+                AppNavigator.switchTab(activity, intent)
                 true
             } else {
                 false

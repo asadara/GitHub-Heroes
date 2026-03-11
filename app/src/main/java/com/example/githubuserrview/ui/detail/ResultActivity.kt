@@ -17,7 +17,12 @@ import com.bumptech.glide.Glide
 import com.example.githubuserrview.R
 import com.example.githubuserrview.adapter.SectionsPagerAdapter
 import com.example.githubuserrview.databinding.ActivityResultBinding
+import com.example.githubuserrview.navigation.BottomNavHelper
 import com.example.githubuserrview.response.DetailUserResponse
+import com.example.githubuserrview.settings.ActiveProfileStore
+import com.example.githubuserrview.settings.AppThemeManager
+import com.example.githubuserrview.ui.common.AppHeader
+import com.example.githubuserrview.ui.common.AppNavigator
 import com.google.android.material.tabs.TabLayout
 import com.google.android.material.tabs.TabLayoutMediator
 import kotlinx.coroutines.CoroutineScope
@@ -37,16 +42,21 @@ class ResultActivity : AppCompatActivity() {
 
     @SuppressLint("SourceLockedOrientationActivity")
     override fun onCreate(savedInstanceState: Bundle?) {
+        AppThemeManager.apply(this)
         super.onCreate(savedInstanceState)
         binding = ActivityResultBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        val username = intent.getStringExtra(EXTRA_USERNAME)
+        val username = intent.getStringExtra(EXTRA_USERNAME)?.trim()
 
-        supportActionBar?.setDisplayHomeAsUpEnabled(true)
-        supportActionBar?.title = getString(R.string.bar_title_detail)
+        AppHeader.apply(
+            this,
+            R.string.bar_title_profile_live,
+            R.string.header_profile_subtitle
+        )
 
         viewModel = ViewModelProvider(this)[DetailViewModel::class.java]
+        BottomNavHelper.setup(this, binding.bottomNav.bottomNav, R.id.nav_profile)
 
         viewModel.getDetailUser().observe(this) { user ->
             if (user != null) {
@@ -69,7 +79,7 @@ class ResultActivity : AppCompatActivity() {
             } else {
                 viewModel.removeFromFavorite(userDetail.id)
             }
-            binding.toggleFav.isChecked = isFavorite
+            renderFavoriteIcon()
         }
 
         val sectionsPagerAdapter = SectionsPagerAdapter(this, username.toString())
@@ -83,6 +93,7 @@ class ResultActivity : AppCompatActivity() {
         this.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
 
         if (!username.isNullOrBlank()) {
+            ActiveProfileStore.save(this, username)
             viewModel.loadUserDetail(username)
         } else {
             showLoading(false)
@@ -103,6 +114,7 @@ class ResultActivity : AppCompatActivity() {
             )
 
         currentUser = user
+        ActiveProfileStore.save(this, user.login)
         supportActionBar?.subtitle = user.login
 
         binding.apply {
@@ -262,18 +274,25 @@ class ResultActivity : AppCompatActivity() {
         binding.lottie.visibility = if (isLoading) View.VISIBLE else View.GONE
     }
 
+    private fun renderFavoriteIcon() {
+        binding.toggleFav.setImageResource(
+            if (isFavorite) R.drawable.ic_heart_filled
+            else R.drawable.ic_heart_outline
+        )
+    }
+
     private fun updateFavoriteState(id: Int) {
         CoroutineScope(Dispatchers.IO).launch {
             val count = viewModel.checkUser(id)
             withContext(Dispatchers.Main) {
                 isFavorite = count > 0
-                binding.toggleFav.isChecked = isFavorite
+                renderFavoriteIcon()
             }
         }
     }
 
     override fun onSupportNavigateUp(): Boolean {
-        finish()
+        AppNavigator.finish(this)
         return true
     }
 

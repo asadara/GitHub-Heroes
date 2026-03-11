@@ -7,33 +7,46 @@ import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.githubuserrview.adapter.PackageAdapter
 import com.example.githubuserrview.api.Package
 import com.example.githubuserrview.databinding.ActivityMainBinding
+import com.example.githubuserrview.data.repository.GithubRepositoryProvider
+import com.example.githubuserrview.data.repository.NetworkResult
 import com.example.githubuserrview.model.MainViewModel
 import com.example.githubuserrview.model.ViewModelFactory
 import com.example.githubuserrview.navigation.BottomNavHelper
+import com.example.githubuserrview.response.DetailUserResponse
 import com.example.githubuserrview.settings.SettingPreferences
+import com.example.githubuserrview.settings.AppThemeManager
 import com.example.githubuserrview.settings.appDataStore
+import com.example.githubuserrview.ui.common.AppHeader
+import com.example.githubuserrview.ui.common.AppNavigator
 import com.example.githubuserrview.ui.detail.ResultActivity
 import com.example.githubuserrview.ui.history.RecentSearchActivity
+import kotlinx.coroutines.launch
 import kotlin.collections.ArrayList
+import com.bumptech.glide.Glide
 
 class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
     private lateinit var mainViewModel: MainViewModel
     private val profiles: ArrayList<Package> by lazy { listGitHub }
+    private val githubRepository by lazy { GithubRepositoryProvider.getInstance() }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        AppThemeManager.apply(this)
         super.onCreate(savedInstanceState)
-        setTheme(R.style.Theme_GitHubUserRview)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        supportActionBar?.title = getString(R.string.bar_title_info)
-        supportActionBar?.subtitle = getString(R.string.home_toolbar_subtitle)
+        AppHeader.apply(
+            this,
+            R.string.bar_title_info,
+            R.string.header_home_subtitle
+        )
 
         val pref = SettingPreferences.getInstance(appDataStore)
         mainViewModel = ViewModelProvider(this, ViewModelFactory(pref))[MainViewModel::class.java]
@@ -44,9 +57,12 @@ class MainActivity : AppCompatActivity() {
             )
         }
 
-        setupHomeContent(profiles)
+        val communityPicks = sortCommunityPicks(profiles)
+        setupHomeContent(communityPicks)
+        showCommunityLoading(true)
+        loadCreatorSpotlight()
         setupQuickActions()
-        showListGh(profiles)
+        showListGh(communityPicks)
         BottomNavHelper.setup(this, binding.bottomNav.bottomNav, R.id.nav_home)
     }
 
@@ -83,58 +99,85 @@ class MainActivity : AppCompatActivity() {
         }
 
     private fun setupHomeContent(items: List<Package>) {
-        val spotlight = selectSpotlight(items) ?: return
         val totalRepositories = items.sumOf { it.repository }
         val totalFollowers = items.sumOf { it.followers }
 
-        binding.tvHomeBadge.text = getString(R.string.home_spotlight_label_balanced)
-        binding.tvHomeSpotlightName.text = spotlight.surename
-        binding.tvHomeSpotlightMeta.text = getString(
-            R.string.home_spotlight_meta,
-            spotlight.followers,
-            spotlight.repository
-        )
-        binding.tvHomeSpotlightSubtitle.text = getString(
-            R.string.home_card_meta,
-            spotlight.company,
-            spotlight.location
-        )
+        binding.tvHomeBadge.text = getString(R.string.home_spotlight_label_creator)
+        binding.tvHomeSpotlightName.text = SPOTLIGHT_USERNAME
+        binding.tvHomeSpotlightMeta.text = getString(R.string.home_spotlight_loading)
+        binding.tvHomeSpotlightSubtitle.text = getString(R.string.home_spotlight_fallback_subtitle)
+        binding.ivHomeSpotlightAvatar.setImageResource(R.drawable.ic_icongithub)
         binding.tvHomeProfilesValue.text = items.size.toString()
         binding.tvHomeRepositoriesValue.text = String.format("%,d", totalRepositories)
         binding.tvHomeFollowersValue.text = String.format("%,d", totalFollowers)
 
         binding.btnHomeSpotlight.setOnClickListener {
-            startActivity(ResultActivity.createIntent(this, spotlight.username))
+            AppNavigator.open(this, ResultActivity.createIntent(this, SPOTLIGHT_USERNAME))
         }
     }
 
-    private fun selectSpotlight(items: List<Package>): Package? {
-        if (items.isEmpty()) return null
-
-        val maxFollowers = items.maxOf { it.followers }.coerceAtLeast(1)
-        val maxRepositories = items.maxOf { it.repository }.coerceAtLeast(1)
-
-        return items.maxByOrNull { item ->
-            val followerScore = item.followers.toDouble() / maxFollowers.toDouble()
-            val repositoryScore = item.repository.toDouble() / maxRepositories.toDouble()
-            (followerScore * 0.7) + (repositoryScore * 0.3)
+    private fun loadCreatorSpotlight() {
+        lifecycleScope.launch {
+            when (val result = githubRepository.getUserDetail(SPOTLIGHT_USERNAME)) {
+                is NetworkResult.Success -> bindCreatorSpotlight(result.data)
+                is NetworkResult.Error -> showCreatorFallback()
+            }
         }
+    }
+
+    private fun bindCreatorSpotlight(user: DetailUserResponse) {
+        Glide.with(this)
+            .load(user.avatarUrl)
+            .centerCrop()
+            .into(binding.ivHomeSpotlightAvatar)
+        binding.tvHomeSpotlightName.text = user.name ?: user.login
+        binding.tvHomeSpotlightMeta.text = getString(
+            R.string.home_spotlight_meta,
+            user.followers,
+            user.publicRepos
+        )
+        binding.tvHomeSpotlightSubtitle.text = getString(
+            R.string.home_card_meta,
+            user.company ?: getString(R.string.detail_unknown_value),
+            user.location ?: getString(R.string.detail_unknown_value)
+        )
+    }
+
+    private fun showCreatorFallback() {
+        binding.ivHomeSpotlightAvatar.setImageResource(R.drawable.ic_icongithub)
+        binding.tvHomeSpotlightName.text = SPOTLIGHT_USERNAME
+        binding.tvHomeSpotlightMeta.text = getString(R.string.home_spotlight_fallback_meta)
+        binding.tvHomeSpotlightSubtitle.text = getString(R.string.home_spotlight_fallback_subtitle)
+    }
+
+    private fun sortCommunityPicks(items: List<Package>): List<Package> {
+        return items.sortedWith(
+            compareByDescending<Package> { it.followers }
+                .thenByDescending { it.repository }
+                .thenBy { it.username.lowercase() }
+        )
     }
 
     private fun setupQuickActions() {
         binding.btnHomeFavorites.setOnClickListener {
-            startActivity(Intent(this, MyFavorites::class.java))
+            AppNavigator.open(this, Intent(this, MyFavorites::class.java))
         }
         binding.btnHomeRecent.setOnClickListener {
-            startActivity(Intent(this, RecentSearchActivity::class.java))
+            AppNavigator.open(this, Intent(this, RecentSearchActivity::class.java))
         }
     }
 
     private fun showSelectedItem(gh: Package) {
-        startActivity(ResultActivity.createIntent(this, gh.username))
+        AppNavigator.open(this, ResultActivity.createIntent(this, gh.username))
     }
 
     private fun showListGh(items: List<Package>) {
+        showCommunityLoading(false)
+        binding.tvHomeEmpty.visibility =
+            if (items.isEmpty()) android.view.View.VISIBLE else android.view.View.GONE
+        binding.recyclerView.visibility =
+            if (items.isEmpty()) android.view.View.GONE else android.view.View.VISIBLE
+
         binding.recyclerView.apply {
             layoutManager = if (
                 applicationContext.resources.configuration.orientation ==
@@ -144,8 +187,22 @@ class MainActivity : AppCompatActivity() {
             } else {
                 LinearLayoutManager(this@MainActivity)
             }
+            isNestedScrollingEnabled = false
             setHasFixedSize(true)
             adapter = PackageAdapter(items, ::showSelectedItem)
         }
+    }
+
+    private fun showCommunityLoading(isLoading: Boolean) {
+        binding.lottieHomeLoading.visibility =
+            if (isLoading) android.view.View.VISIBLE else android.view.View.GONE
+        if (isLoading) {
+            binding.recyclerView.visibility = android.view.View.GONE
+            binding.tvHomeEmpty.visibility = android.view.View.GONE
+        }
+    }
+
+    companion object {
+        private const val SPOTLIGHT_USERNAME = "asadara"
     }
 }

@@ -11,7 +11,11 @@ import retrofit2.http.Query
 //interface retrofit
 interface ApiService {
     @GET("search/users?")
-    fun getSearchUsers(@Query("q") query: String): Call<UserResponse>
+    fun getSearchUsers(
+        @Query("q") query: String,
+        @Query("page") page: Int,
+        @Query("per_page") perPage: Int
+    ): Call<UserResponse>
 
     @GET("users/{username}")
     fun getDetailUser(@Path("username") username: String): Call<DetailUserResponse>

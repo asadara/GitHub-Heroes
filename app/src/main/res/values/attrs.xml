@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <attr name="appBackground" format="color" />
+    <attr name="appSurfaceCard" format="color" />
+    <attr name="appSurfaceTint" format="color" />
+    <attr name="appStrokeColor" format="color" />
+    <attr name="appTextPrimary" format="color" />
+    <attr name="appTextSecondary" format="color" />
+    <attr name="appChipBackground" format="color" />
+    <attr name="appChipStrokeColor" format="color" />
+    <attr name="appChipTextColor" format="color" />
+    <attr name="appHeaderSubtitleColor" format="color" />
+</resources>

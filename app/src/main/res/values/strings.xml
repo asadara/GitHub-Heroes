@@ -10,6 +10,7 @@
     <string name="iconnama">iconnama</string>
     <string name="bar_title_info">GitHub User | Profile Info</string>
     <string name="bar_title_detail">GitHub User | Detail Info</string>
+    <string name="bar_title_profile_live">GitHub User | Profil</string>
     <string name="bar_title_search">GitHub User | Search</string>
     <string name="bar_title_fav">GitHub User | Favorites</string>
     <string name="tombollike" />
@@ -32,6 +33,12 @@
     <string name="search_result_for">Search Result for :</string>
     <string name="search_error_empty_query">Masukkan kata kunci pencarian terlebih dahulu.</string>
     <string name="recent_searches">Recent Searches</string>
+    <string name="header_home_subtitle">Pilihan profil GitHub yang layak dijelajahi.</string>
+    <string name="header_search_subtitle">Cari username dan buka profil live dari GitHub.</string>
+    <string name="header_favorites_subtitle">Profil yang Anda simpan untuk akses cepat.</string>
+    <string name="header_settings_subtitle">Tema aplikasi, riwayat, dan preferensi utama.</string>
+    <string name="header_recent_subtitle">Riwayat query yang pernah Anda jalankan.</string>
+    <string name="header_profile_subtitle">Profil aktif yang sedang Anda eksplorasi.</string>
     <string name="recent_searches_empty">Belum ada riwayat pencarian.</string>
     <string name="clear_recent_searches">Clear</string>
     <string name="setting_theme">Setting Theme (Dark or Light)</string>
@@ -44,7 +51,11 @@
     <string name="home_toolbar_subtitle">Curated developer picks</string>
     <string name="home_spotlight_label">Spotlight</string>
     <string name="home_spotlight_label_balanced">Balanced Hero</string>
+    <string name="home_spotlight_label_creator">Creator Spotlight</string>
     <string name="home_spotlight_meta">%1$,d followers | %2$d repos</string>
+    <string name="home_spotlight_loading">Loading live GitHub profile...</string>
+    <string name="home_spotlight_fallback_meta">GitHub profile | asadara</string>
+    <string name="home_spotlight_fallback_subtitle">Open the live profile page for the project owner.</string>
     <string name="home_stat_profiles">Profiles</string>
     <string name="home_stat_repositories">Repositories</string>
     <string name="home_stat_followers">Followers</string>
@@ -52,11 +63,16 @@
     <string name="home_open_favorites">Open Favorites</string>
     <string name="home_open_recent">Recent Searches</string>
     <string name="home_section_title">Community Picks</string>
-    <string name="home_section_subtitle">Tap a card to fetch live profile data from GitHub.</string>
+    <string name="home_section_subtitle">Sorted by followers, then public repository count.</string>
+    <string name="home_community_loading">Loading community picks...</string>
+    <string name="home_community_empty">Community picks belum tersedia.</string>
     <string name="home_card_meta">%1$s | %2$s</string>
     <string name="home_card_status">%1$,d followers | %2$d repos</string>
     <string name="home_card_badge_popular">High Reach</string>
     <string name="home_card_badge_builder">Active Builder</string>
+    <string name="search_card_badge_live">Live User</string>
+    <string name="search_card_meta_id">GitHub account ID %1$d</string>
+    <string name="search_card_status_hint">Tap untuk membuka profil live GitHub</string>
     <string name="detail_username_format">@%1$s</string>
     <string name="detail_type_joined">%1$s | Joined %2$s</string>
     <string name="detail_joined_unknown">date unknown</string>
@@ -88,6 +104,13 @@
     <string name="search_input_hint">Cari username GitHub</string>
     <string name="search_action">Cari</string>
     <string name="search_idle_title">Masukkan username untuk memulai pencarian.</string>
+    <string name="search_result_idle_meta">Hasil akan tampil setelah Anda menjalankan pencarian.</string>
+    <string name="search_result_loading_meta">Mengambil hasil dari GitHub...</string>
+    <string name="search_result_empty_meta">Belum ada hasil untuk ditampilkan.</string>
+    <string name="search_result_meta_format">%1$,d hasil ditemukan. Menampilkan %2$d-%3$d.</string>
+    <string name="search_page_indicator">Halaman %1$d</string>
+    <string name="search_prev_page">Sebelumnya</string>
+    <string name="search_next_page">Berikutnya</string>
     <string name="search_recent_button">Riwayat Pencarian</string>
     <string name="favorites_empty">Belum ada user favorit yang tersimpan.</string>
     <string name="favorites_hint">Simpan profil dari halaman detail untuk melihatnya di sini.</string>
@@ -103,6 +126,8 @@
     <string name="settings_title">Pengaturan</string>
     <string name="settings_theme_title">Tema Aplikasi</string>
     <string name="settings_theme_body">Atur dark mode atau light mode langsung dari halaman ini.</string>
+    <string name="settings_palette_title">Palet Warna</string>
+    <string name="settings_palette_body">Pilih warna utama aplikasi yang akan dipakai di seluruh halaman.</string>
     <string name="settings_history_title">Riwayat Pencarian</string>
     <string name="settings_history_body">Buka atau bersihkan query yang pernah Anda cari.</string>
     <string name="settings_clear_history">Clear History</string>
@@ -110,6 +135,10 @@
     <string name="settings_theme_status_on">Dark mode aktif</string>
     <string name="settings_theme_status_off">Light mode aktif</string>
     <string name="settings_history_cleared">Riwayat pencarian dibersihkan.</string>
+    <string name="theme_palette_forest">Forest</string>
+    <string name="theme_palette_ocean">Ocean</string>
+    <string name="theme_palette_terracotta">Terracotta</string>
+    <string name="theme_palette_slate">Slate</string>
     <string name="open_link_error">Tidak ada aplikasi untuk membuka link tersebut.</string>
 
     <string name="title">Judul</string>

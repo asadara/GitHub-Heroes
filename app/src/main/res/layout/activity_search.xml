@@ -5,23 +5,8 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/forest_50"
+    android:background="?attr/appBackground"
     tools:context=".ui.main.SearchActivity">
-
-    <TextView
-        android:id="@+id/tv_search_title"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="16dp"
-        android:layout_marginTop="16dp"
-        android:layout_marginEnd="16dp"
-        android:text="@string/bar_title_search"
-        android:textColor="@color/ink_900"
-        android:textSize="24sp"
-        android:textStyle="bold"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
 
     <com.google.android.material.textfield.TextInputLayout
         android:id="@+id/search_input_layout"
@@ -29,16 +14,17 @@
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginStart="16dp"
-        android:layout_marginTop="16dp"
+        android:layout_marginTop="18dp"
         android:layout_marginEnd="8dp"
         android:hint="@string/search_input_hint"
+        app:endIconMode="clear_text"
         app:boxCornerRadiusBottomEnd="20dp"
         app:boxCornerRadiusBottomStart="20dp"
         app:boxCornerRadiusTopEnd="20dp"
         app:boxCornerRadiusTopStart="20dp"
         app:layout_constraintEnd_toStartOf="@id/btn_search"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/tv_search_title">
+        app:layout_constraintTop_toTopOf="parent">
 
         <com.google.android.material.textfield.TextInputEditText
             android:id="@+id/et_search"
@@ -57,7 +43,7 @@
         android:layout_marginTop="16dp"
         android:layout_marginEnd="16dp"
         android:text="@string/search_action"
-        app:backgroundTint="@color/forest_700"
+        app:backgroundTint="?attr/colorPrimary"
         app:cornerRadius="18dp"
         app:layout_constraintBottom_toBottomOf="@id/search_input_layout"
         app:layout_constraintEnd_toEndOf="parent"
@@ -73,10 +59,10 @@
         android:text="@string/search_recent_button"
         app:cornerRadius="16dp"
         app:icon="@drawable/ic_baseline_search_24"
-        app:iconTint="@color/forest_700"
+        app:iconTint="?attr/colorPrimary"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/search_input_layout"
-        app:strokeColor="@color/forest_300" />
+        app:strokeColor="?attr/colorSecondaryVariant" />
 
     <TextView
         android:id="@+id/search_for"
@@ -86,36 +72,125 @@
         android:layout_marginTop="12dp"
         android:layout_marginEnd="16dp"
         android:text="@string/search_idle_title"
-        android:textColor="@color/ink_900"
+        android:textColor="?attr/appTextPrimary"
         android:textSize="16sp"
         android:textStyle="bold"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/btn_recent_searches" />
 
-    <com.airbnb.lottie.LottieAnimationView
-        android:id="@+id/lottie"
+    <TextView
+        android:id="@+id/tv_search_result_meta"
         android:layout_width="0dp"
-        android:layout_height="0dp"
-        app:layout_constraintBottom_toBottomOf="@+id/recycler_view_retro"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="16dp"
+        android:layout_marginTop="4dp"
+        android:layout_marginEnd="16dp"
+        android:textColor="?attr/appTextSecondary"
+        android:textSize="13sp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/search_for"
-        app:lottie_autoPlay="true"
-        app:lottie_loop="true"
-        app:lottie_rawRes="@raw/meditatingmonkey" />
+        app:layout_constraintTop_toBottomOf="@id/search_for"
+        tools:text="234 hasil ditemukan. Menampilkan 1-20." />
+
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/card_search_loading"
+        android:layout_width="220dp"
+        android:layout_height="wrap_content"
+        android:elevation="24dp"
+        android:visibility="gone"
+        app:cardBackgroundColor="?attr/appSurfaceCard"
+        app:cardCornerRadius="24dp"
+        app:cardElevation="12dp"
+        app:strokeColor="?attr/appStrokeColor"
+        app:strokeWidth="1dp"
+        app:layout_constraintBottom_toTopOf="@id/layout_search_pagination"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/tv_search_result_meta">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:orientation="vertical"
+            android:padding="18dp">
+
+            <com.airbnb.lottie.LottieAnimationView
+                android:id="@+id/lottie"
+                android:layout_width="120dp"
+                android:layout_height="120dp"
+                app:lottie_autoPlay="true"
+                app:lottie_loop="true"
+                app:lottie_rawRes="@raw/meditatingmonkey" />
+
+            <TextView
+                android:id="@+id/tv_search_loading_label"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="@string/search_result_loading_meta"
+                android:textColor="?attr/appTextSecondary"
+                android:textSize="13sp" />
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
 
     <com.airbnb.lottie.LottieAnimationView
         android:id="@+id/lottie_not_found"
         android:layout_width="0dp"
         android:layout_height="0dp"
+        android:layout_marginBottom="52dp"
         app:layout_constraintBottom_toBottomOf="@+id/recycler_view_retro"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/search_for"
+        app:layout_constraintTop_toBottomOf="@+id/tv_search_result_meta"
         app:lottie_autoPlay="true"
         app:lottie_loop="true"
         app:lottie_rawRes="@raw/datanotfound" />
+
+    <LinearLayout
+        android:id="@+id/layout_search_pagination"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="16dp"
+        android:layout_marginEnd="16dp"
+        android:layout_marginBottom="8dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        app:layout_constraintBottom_toTopOf="@id/bottom_nav"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_prev_page"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/search_prev_page"
+            app:cornerRadius="16dp"
+            app:strokeColor="?attr/colorSecondaryVariant" />
+
+        <TextView
+            android:id="@+id/tv_page_indicator"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="12dp"
+            android:layout_marginEnd="12dp"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:textColor="?attr/appTextSecondary"
+            android:textSize="13sp"
+            tools:text="Halaman 1" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_next_page"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/search_next_page"
+            app:cornerRadius="16dp"
+            app:strokeColor="?attr/colorSecondaryVariant" />
+    </LinearLayout>
 
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/recycler_view_retro"
@@ -125,13 +200,15 @@
         android:layout_marginTop="8dp"
         android:layout_marginEnd="8dp"
         android:layout_marginBottom="8dp"
-        app:layout_constraintBottom_toTopOf="@id/bottom_nav"
+        app:layout_constraintBottom_toTopOf="@id/layout_search_pagination"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/search_for" />
+        app:layout_constraintTop_toBottomOf="@+id/tv_search_result_meta" />
 
     <include
         android:id="@+id/bottom_nav"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
         layout="@layout/include_bottom_nav"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"

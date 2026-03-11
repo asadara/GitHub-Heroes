@@ -4,37 +4,22 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/forest_50"
+    android:background="?attr/appBackground"
     tools:context=".MyFavorites">
-
-    <TextView
-        android:id="@+id/tv_favorites_title"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="16dp"
-        android:layout_marginTop="16dp"
-        android:layout_marginEnd="16dp"
-        android:text="@string/bar_title_fav"
-        android:textColor="@color/ink_900"
-        android:textSize="24sp"
-        android:textStyle="bold"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
 
     <TextView
         android:id="@+id/tv_favorites_hint"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginStart="16dp"
-        android:layout_marginTop="6dp"
+        android:layout_marginTop="18dp"
         android:layout_marginEnd="16dp"
         android:text="@string/favorites_hint"
-        android:textColor="@color/ink_600"
+        android:textColor="?attr/appTextSecondary"
         android:textSize="14sp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/tv_favorites_title" />
+        app:layout_constraintTop_toTopOf="parent" />
 
     <TextView
         android:id="@+id/tv_empty_favorites"
@@ -42,7 +27,7 @@
         android:layout_height="wrap_content"
         android:gravity="center"
         android:text="@string/favorites_empty"
-        android:textColor="@color/ink_600"
+        android:textColor="?attr/appTextSecondary"
         android:textSize="16sp"
         app:layout_constraintBottom_toTopOf="@id/bottom_nav"
         app:layout_constraintEnd_toEndOf="parent"
@@ -64,6 +49,8 @@
 
     <include
         android:id="@+id/bottom_nav"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
         layout="@layout/include_bottom_nav"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"

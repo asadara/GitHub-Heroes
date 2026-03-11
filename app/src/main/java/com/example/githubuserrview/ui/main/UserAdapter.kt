@@ -4,8 +4,9 @@ import android.view.LayoutInflater
 import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
-import com.example.githubuserrview.databinding.SearchItemBinding
+import com.example.githubuserrview.R
 import com.example.githubuserrview.data.model.User
+import com.example.githubuserrview.databinding.SearchItemBinding
 
 class UserAdapter : RecyclerView.Adapter<UserAdapter.UserViewHolder>() {
 
@@ -28,12 +29,16 @@ class UserAdapter : RecyclerView.Adapter<UserAdapter.UserViewHolder>() {
                 onItemClickCallback?.onItemClicked(user)
             }
             binding.apply {
+                val context = itemView.context
                 Glide.with(itemView)
                     .load(user.avatar_url)
                     .centerCrop()
                     .into(ivPhotoRetro)
                 tvNameRetro.text = user.login
-                tvUserIdRetro.text = user.id.toString()
+                tvBadgeRetro.text = context.getString(R.string.search_card_badge_live)
+                tvUserIdRetro.text = context.getString(R.string.detail_username_format, user.login)
+                tvWebsiteRetro.text = context.getString(R.string.search_card_meta_id, user.id)
+                tvStatusRetro.text = context.getString(R.string.search_card_status_hint)
             }
         }
     }

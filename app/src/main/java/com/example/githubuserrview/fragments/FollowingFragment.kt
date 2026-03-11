@@ -3,6 +3,7 @@ package com.example.githubuserrview.fragments
 import android.os.Bundle
 import android.view.View
 import android.widget.Toast
+import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -10,6 +11,7 @@ import com.example.githubuserrview.R
 import com.example.githubuserrview.data.model.User
 import com.example.githubuserrview.databinding.FragmentFollowingBinding
 import com.example.githubuserrview.model.FollowingViewModel
+import com.example.githubuserrview.ui.common.AppNavigator
 import com.example.githubuserrview.ui.detail.ResultActivity
 import com.example.githubuserrview.ui.main.UserAdapter
 
@@ -60,7 +62,8 @@ class FollowingFragment : Fragment(R.layout.fragment_following) {
     }
 
     private fun openResult(data: User) {
-        startActivity(
+        AppNavigator.open(
+            requireActivity() as AppCompatActivity,
             ResultActivity.createIntent(
                 requireContext(),
                 data.login,
