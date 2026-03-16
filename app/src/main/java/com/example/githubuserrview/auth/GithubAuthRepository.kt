@@ -10,6 +10,9 @@ import com.example.githubuserrview.data.model.GithubRepoLicense
 import com.example.githubuserrview.data.model.GithubRepoOwner
 import com.example.githubuserrview.data.model.GithubRepo
 import com.example.githubuserrview.data.model.GithubCommit
+import com.example.githubuserrview.data.model.GithubBranch
+import com.example.githubuserrview.data.model.GithubContributor
+import com.example.githubuserrview.data.model.GithubIssue
 import com.example.githubuserrview.data.local.CachedGithubProfile
 import com.example.githubuserrview.data.local.CachedGithubRepo
 import com.example.githubuserrview.data.local.UserDatabase
@@ -181,6 +184,71 @@ class GithubAuthRepository(
             }
         } catch (error: Exception) {
             NetworkResult.Error(error.localizedMessage ?: "Gagal memuat commit terbaru.")
+        }
+    }
+
+    suspend fun getRepositoryBranches(
+        owner: String,
+        repositoryName: String
+    ): NetworkResult<List<GithubBranch>> = withContext(Dispatchers.IO) {
+        val accessToken = authStore.getSession()?.accessToken
+
+        try {
+            val response = ApiConfig.getApiService(accessToken)
+                .getRepositoryBranches(owner, repositoryName)
+                .execute()
+
+            if (response.isSuccessful) {
+                NetworkResult.Success(response.body().orEmpty())
+            } else {
+                NetworkResult.Error("Gagal memuat branch repository. (${response.code()})")
+            }
+        } catch (error: Exception) {
+            NetworkResult.Error(error.localizedMessage ?: "Gagal memuat branch repository.")
+        }
+    }
+
+    suspend fun getRepositoryContributors(
+        owner: String,
+        repositoryName: String
+    ): NetworkResult<List<GithubContributor>> = withContext(Dispatchers.IO) {
+        val accessToken = authStore.getSession()?.accessToken
+
+        try {
+            val response = ApiConfig.getApiService(accessToken)
+                .getRepositoryContributors(owner, repositoryName)
+                .execute()
+
+            if (response.isSuccessful) {
+                NetworkResult.Success(response.body().orEmpty())
+            } else {
+                NetworkResult.Error("Gagal memuat contributor repository. (${response.code()})")
+            }
+        } catch (error: Exception) {
+            NetworkResult.Error(error.localizedMessage ?: "Gagal memuat contributor repository.")
+        }
+    }
+
+    suspend fun getRepositoryIssues(
+        owner: String,
+        repositoryName: String
+    ): NetworkResult<List<GithubIssue>> = withContext(Dispatchers.IO) {
+        val accessToken = authStore.getSession()?.accessToken
+
+        try {
+            val response = ApiConfig.getApiService(accessToken)
+                .getRepositoryIssues(owner, repositoryName)
+                .execute()
+
+            if (response.isSuccessful) {
+                val issues = response.body().orEmpty()
+                    .filter { it.pullRequest == null }
+                NetworkResult.Success(issues)
+            } else {
+                NetworkResult.Error("Gagal memuat issue repository. (${response.code()})")
+            }
+        } catch (error: Exception) {
+            NetworkResult.Error(error.localizedMessage ?: "Gagal memuat issue repository.")
         }
     }
 

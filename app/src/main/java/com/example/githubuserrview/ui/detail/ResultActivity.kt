@@ -12,10 +12,16 @@ import android.widget.Toast
 import androidx.annotation.StringRes
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.ViewModelProvider
+import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.viewpager2.widget.ViewPager2
 import com.bumptech.glide.Glide
 import com.example.githubuserrview.R
 import com.example.githubuserrview.adapter.SectionsPagerAdapter
+import com.example.githubuserrview.api.ApiConfig
+import com.example.githubuserrview.auth.GithubAuthRepository
+import com.example.githubuserrview.data.model.GithubRepo
+import com.example.githubuserrview.data.repository.GithubRepository
+import com.example.githubuserrview.data.repository.NetworkResult
 import com.example.githubuserrview.databinding.ActivityResultBinding
 import com.example.githubuserrview.navigation.BottomNavHelper
 import com.example.githubuserrview.response.DetailUserResponse
@@ -23,6 +29,8 @@ import com.example.githubuserrview.settings.ActiveProfileStore
 import com.example.githubuserrview.settings.AppThemeManager
 import com.example.githubuserrview.ui.common.AppHeader
 import com.example.githubuserrview.ui.common.AppNavigator
+import com.example.githubuserrview.ui.profile.ProfileRepoAdapter
+import com.example.githubuserrview.ui.profile.RepositoryDetailActivity
 import com.google.android.material.tabs.TabLayout
 import com.google.android.material.tabs.TabLayoutMediator
 import kotlinx.coroutines.CoroutineScope
@@ -37,6 +45,12 @@ class ResultActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityResultBinding
     private lateinit var viewModel: DetailViewModel
+    private val githubRepository by lazy {
+        GithubRepository(
+            ApiConfig.getApiService(GithubAuthRepository(this).getSession()?.accessToken)
+        )
+    }
+    private val publicRepoAdapter by lazy { ProfileRepoAdapter(::openRepository) }
     private var currentUser: DetailUserResponse? = null
     private var isFavorite = false
 
@@ -57,6 +71,12 @@ class ResultActivity : AppCompatActivity() {
 
         viewModel = ViewModelProvider(this)[DetailViewModel::class.java]
         BottomNavHelper.setup(this, binding.bottomNav.bottomNav, R.id.nav_profile)
+        binding.recyclerPublicRepos.apply {
+            layoutManager = LinearLayoutManager(this@ResultActivity)
+            isNestedScrollingEnabled = false
+            adapter = publicRepoAdapter
+        }
+        bindPublicRepositories(emptyList())
 
         viewModel.getDetailUser().observe(this) { user ->
             if (user != null) {
@@ -154,6 +174,7 @@ class ResultActivity : AppCompatActivity() {
 
         updateFavoriteState(user.id)
         setupActions(user, blogUrl)
+        loadPublicRepositories(user.login)
     }
 
     private fun setupActions(user: DetailUserResponse, blogUrl: String?) {
@@ -272,6 +293,39 @@ class ResultActivity : AppCompatActivity() {
 
     private fun showLoading(isLoading: Boolean) {
         binding.lottie.visibility = if (isLoading) View.VISIBLE else View.GONE
+    }
+
+    private fun loadPublicRepositories(username: String) {
+        CoroutineScope(Dispatchers.Main).launch {
+            when (val result = githubRepository.getPublicRepositories(username)) {
+                is NetworkResult.Success -> bindPublicRepositories(result.data)
+                is NetworkResult.Error -> bindPublicRepositories(emptyList())
+            }
+        }
+    }
+
+    private fun bindPublicRepositories(repositories: List<GithubRepo>) {
+        publicRepoAdapter.submitList(repositories)
+        binding.tvPublicRepoSectionMeta.text = getString(
+            R.string.public_repo_count,
+            repositories.size
+        )
+        binding.tvPublicRepoEmpty.visibility =
+            if (repositories.isEmpty()) View.VISIBLE else View.GONE
+        binding.recyclerPublicRepos.visibility =
+            if (repositories.isEmpty()) View.GONE else View.VISIBLE
+    }
+
+    private fun openRepository(repository: GithubRepo) {
+        AppNavigator.open(
+            this,
+            RepositoryDetailActivity.createIntent(
+                context = this,
+                owner = repository.owner.login,
+                repositoryName = repository.name,
+                fullName = repository.fullName
+            )
+        )
     }
 
     private fun renderFavoriteIcon() {

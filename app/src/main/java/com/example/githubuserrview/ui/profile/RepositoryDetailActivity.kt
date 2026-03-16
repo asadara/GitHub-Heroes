@@ -5,14 +5,19 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
+import android.util.Base64
 import android.view.View
+import android.view.ViewGroup
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import com.bumptech.glide.Glide
 import com.example.githubuserrview.R
 import com.example.githubuserrview.auth.GithubAuthRepository
+import com.example.githubuserrview.data.model.GithubBranch
 import com.example.githubuserrview.data.model.GithubCommit
+import com.example.githubuserrview.data.model.GithubContributor
+import com.example.githubuserrview.data.model.GithubIssue
 import com.example.githubuserrview.data.model.GithubReadme
 import com.example.githubuserrview.data.model.GithubRepo
 import com.example.githubuserrview.data.repository.NetworkResult
@@ -20,12 +25,13 @@ import com.example.githubuserrview.databinding.ActivityRepositoryDetailBinding
 import com.example.githubuserrview.settings.AppThemeManager
 import com.example.githubuserrview.ui.common.AppHeader
 import com.example.githubuserrview.ui.common.AppNavigator
-import kotlinx.coroutines.async
-import kotlinx.coroutines.launch
-import android.util.Base64
+import com.google.android.material.chip.Chip
+import com.google.android.material.chip.ChipGroup
 import java.text.SimpleDateFormat
 import java.util.Locale
 import java.util.TimeZone
+import kotlinx.coroutines.async
+import kotlinx.coroutines.launch
 
 class RepositoryDetailActivity : AppCompatActivity() {
 
@@ -79,9 +85,24 @@ class RepositoryDetailActivity : AppCompatActivity() {
         lifecycleScope.launch {
             githubAuthRepository.getCachedRepository(fullName)?.let(::bindRepository)
 
-            val detailDeferred = async { githubAuthRepository.getRepositoryDetail(owner, repositoryName) }
-            val readmeDeferred = async { githubAuthRepository.getRepositoryReadme(owner, repositoryName) }
-            val commitsDeferred = async { githubAuthRepository.getRecentCommits(owner, repositoryName) }
+            val detailDeferred = async {
+                githubAuthRepository.getRepositoryDetail(owner, repositoryName)
+            }
+            val readmeDeferred = async {
+                githubAuthRepository.getRepositoryReadme(owner, repositoryName)
+            }
+            val commitsDeferred = async {
+                githubAuthRepository.getRecentCommits(owner, repositoryName)
+            }
+            val branchesDeferred = async {
+                githubAuthRepository.getRepositoryBranches(owner, repositoryName)
+            }
+            val contributorsDeferred = async {
+                githubAuthRepository.getRepositoryContributors(owner, repositoryName)
+            }
+            val issuesDeferred = async {
+                githubAuthRepository.getRepositoryIssues(owner, repositoryName)
+            }
 
             when (val result = detailDeferred.await()) {
                 is NetworkResult.Success -> bindRepository(result.data)
@@ -94,14 +115,27 @@ class RepositoryDetailActivity : AppCompatActivity() {
 
             when (val readmeResult = readmeDeferred.await()) {
                 is NetworkResult.Success -> bindReadme(readmeResult.data)
-                is NetworkResult.Error -> {
-                    bindReadme(null)
-                }
+                is NetworkResult.Error -> bindReadme(null)
             }
 
             when (val commitsResult = commitsDeferred.await()) {
                 is NetworkResult.Success -> bindCommits(commitsResult.data)
                 is NetworkResult.Error -> bindCommits(emptyList())
+            }
+
+            when (val branchesResult = branchesDeferred.await()) {
+                is NetworkResult.Success -> bindBranches(branchesResult.data)
+                is NetworkResult.Error -> bindBranches(emptyList())
+            }
+
+            when (val contributorsResult = contributorsDeferred.await()) {
+                is NetworkResult.Success -> bindContributors(contributorsResult.data)
+                is NetworkResult.Error -> bindContributors(emptyList())
+            }
+
+            when (val issuesResult = issuesDeferred.await()) {
+                is NetworkResult.Success -> bindIssues(issuesResult.data)
+                is NetworkResult.Error -> bindIssues(emptyList())
             }
 
             if (showRefreshToast && currentRepository != null) {
@@ -178,6 +212,81 @@ class RepositoryDetailActivity : AppCompatActivity() {
                 val message = commit.commit.message.lineSequence().firstOrNull().orEmpty()
                 "• $message\n$author · $date"
             }
+        }
+    }
+
+    private fun bindBranches(branches: List<GithubBranch>) {
+        populateChipGroup(
+            chipGroup = binding.chipGroupRepoBranches,
+            labels = branches.map { branch ->
+                if (branch.isProtected) {
+                    getString(R.string.repo_detail_branch_protected, branch.name)
+                } else {
+                    branch.name
+                }
+            },
+            emptyLabel = getString(R.string.repo_detail_branches_empty)
+        )
+    }
+
+    private fun bindContributors(contributors: List<GithubContributor>) {
+        populateChipGroup(
+            chipGroup = binding.chipGroupRepoContributors,
+            labels = contributors.map { contributor ->
+                getString(
+                    R.string.repo_detail_contributor_label,
+                    contributor.login,
+                    contributor.contributions
+                )
+            },
+            emptyLabel = getString(R.string.repo_detail_contributors_empty)
+        )
+    }
+
+    private fun bindIssues(issues: List<GithubIssue>) {
+        binding.tvRepoIssues.text = if (issues.isEmpty()) {
+            getString(R.string.repo_detail_issues_empty)
+        } else {
+            buildString {
+                appendLine(getString(R.string.repo_detail_issue_header, issues.size))
+                appendLine()
+                append(
+                    issues.joinToString("\n\n") { issue ->
+                        getString(
+                            R.string.repo_detail_issue_line,
+                            issue.number,
+                            issue.title,
+                            issue.user?.login ?: getString(R.string.detail_unknown_value),
+                            issue.comments
+                        )
+                    }
+                )
+            }.trim()
+        }
+    }
+
+    private fun populateChipGroup(
+        chipGroup: ChipGroup,
+        labels: List<String>,
+        emptyLabel: String
+    ) {
+        chipGroup.removeAllViews()
+        val values = if (labels.isEmpty()) listOf(emptyLabel) else labels
+        values.forEach { label ->
+            chipGroup.addView(createInfoChip(label))
+        }
+    }
+
+    private fun createInfoChip(label: String): Chip {
+        return Chip(this).apply {
+            text = label
+            isCheckable = false
+            isClickable = false
+            isFocusable = false
+            layoutParams = ViewGroup.MarginLayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            )
         }
     }
 

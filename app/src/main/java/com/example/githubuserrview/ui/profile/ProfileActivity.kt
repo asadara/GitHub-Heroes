@@ -7,6 +7,7 @@ import android.os.Bundle
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
+import androidx.core.widget.doAfterTextChanged
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -40,6 +41,9 @@ class ProfileActivity : AppCompatActivity() {
     private lateinit var binding: ActivityProfileBinding
     private val githubAuthRepository by lazy { GithubAuthRepository(this) }
     private val repoAdapter by lazy { ProfileRepoAdapter(::openRepository) }
+    private var allRepositories: List<GithubRepo> = emptyList()
+    private var repoSortMode: RepoSortMode = RepoSortMode.UPDATED
+    private var repoFilterMode: RepoFilterMode = RepoFilterMode.ALL
 
     override fun onCreate(savedInstanceState: Bundle?) {
         AppThemeManager.apply(this)
@@ -58,6 +62,7 @@ class ProfileActivity : AppCompatActivity() {
             isNestedScrollingEnabled = false
             adapter = repoAdapter
         }
+        setupRepositoryControls()
 
         binding.btnProfileOpenGithub.setOnClickListener {
             openExternalUrl(githubAuthRepository.getSession()?.htmlUrl)
@@ -211,15 +216,8 @@ class ProfileActivity : AppCompatActivity() {
     }
 
     private fun bindRepositories(repositories: List<GithubRepo>) {
-        repoAdapter.submitList(repositories)
-        binding.tvProfileRepoEmpty.visibility =
-            if (repositories.isEmpty()) View.VISIBLE else View.GONE
-        binding.recyclerProfileRepos.visibility =
-            if (repositories.isEmpty()) View.GONE else View.VISIBLE
-        binding.tvProfileRepoSectionMeta.text = getString(
-            R.string.profile_repo_count,
-            repositories.size
-        )
+        allRepositories = repositories
+        applyRepositoryControls()
     }
 
     private fun bindOrganizations(
@@ -314,9 +312,11 @@ class ProfileActivity : AppCompatActivity() {
         binding.tvProfileFollowers.text = "0"
         binding.tvProfileFollowing.text = "0"
         binding.tvProfileRepos.text = "0"
-        binding.tvProfileRepoSectionMeta.text = getString(R.string.profile_repo_count, 0)
-        binding.tvProfileRepoEmpty.visibility = View.VISIBLE
-        binding.recyclerProfileRepos.visibility = View.GONE
+        allRepositories = emptyList()
+        binding.etProfileRepoSearch.setText("")
+        binding.chipRepoSortUpdated.isChecked = true
+        binding.chipRepoFilterAll.isChecked = true
+        applyRepositoryControls()
         repoAdapter.submitList(emptyList())
         binding.tvProfileOrgsHint.text = getString(R.string.profile_orgs_hint)
         binding.tvProfileEmailsHint.text = getString(R.string.profile_emails_hint)
@@ -386,5 +386,113 @@ class ProfileActivity : AppCompatActivity() {
 
     private fun showToast(message: String) {
         Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
+    }
+
+    private fun setupRepositoryControls() {
+        binding.inputLayoutProfileRepoSearch.setEndIconOnClickListener {
+            applyRepositoryControls()
+        }
+        binding.etProfileRepoSearch.doAfterTextChanged {
+            applyRepositoryControls()
+        }
+        binding.chipGroupProfileRepoSort.setOnCheckedChangeListener { _, checkedId ->
+            repoSortMode = when (checkedId) {
+                R.id.chip_repo_sort_stars -> RepoSortMode.STARS
+                R.id.chip_repo_sort_name -> RepoSortMode.NAME
+                else -> RepoSortMode.UPDATED
+            }
+            applyRepositoryControls()
+        }
+        binding.chipGroupProfileRepoFilter.setOnCheckedChangeListener { _, checkedId ->
+            repoFilterMode = when (checkedId) {
+                R.id.chip_repo_filter_starred -> RepoFilterMode.STARRED
+                R.id.chip_repo_filter_issues -> RepoFilterMode.ISSUES
+                R.id.chip_repo_filter_license -> RepoFilterMode.LICENSED
+                else -> RepoFilterMode.ALL
+            }
+            applyRepositoryControls()
+        }
+    }
+
+    private fun applyRepositoryControls() {
+        val query = binding.etProfileRepoSearch.text?.toString()?.trim().orEmpty()
+
+        val filteredRepositories = allRepositories
+            .filter { repository ->
+                matchesRepositoryFilter(repository) && matchesRepositoryQuery(repository, query)
+            }
+            .let(::sortRepositories)
+
+        repoAdapter.submitList(filteredRepositories)
+        binding.tvProfileRepoEmpty.visibility =
+            if (filteredRepositories.isEmpty()) View.VISIBLE else View.GONE
+        binding.recyclerProfileRepos.visibility =
+            if (filteredRepositories.isEmpty()) View.GONE else View.VISIBLE
+        binding.tvProfileRepoSectionMeta.text = getString(
+            R.string.profile_repo_count_filtered,
+            filteredRepositories.size,
+            allRepositories.size
+        )
+        binding.tvProfileRepoEmpty.text = if (allRepositories.isEmpty()) {
+            getString(R.string.profile_repo_empty)
+        } else {
+            getString(R.string.profile_repo_empty_filtered)
+        }
+    }
+
+    private fun matchesRepositoryFilter(repository: GithubRepo): Boolean {
+        return when (repoFilterMode) {
+            RepoFilterMode.ALL -> true
+            RepoFilterMode.STARRED -> repository.stargazersCount > 0
+            RepoFilterMode.ISSUES -> repository.openIssuesCount > 0
+            RepoFilterMode.LICENSED -> !repository.license?.name.isNullOrBlank()
+        }
+    }
+
+    private fun matchesRepositoryQuery(repository: GithubRepo, query: String): Boolean {
+        if (query.isBlank()) {
+            return true
+        }
+
+        val normalizedQuery = query.lowercase(Locale.getDefault())
+        val searchableFields = listOf(
+            repository.name,
+            repository.fullName,
+            repository.description.orEmpty(),
+            repository.language.orEmpty(),
+            repository.license?.name.orEmpty()
+        )
+
+        return searchableFields.any { field ->
+            field.lowercase(Locale.getDefault()).contains(normalizedQuery)
+        }
+    }
+
+    private fun sortRepositories(repositories: List<GithubRepo>): List<GithubRepo> {
+        return when (repoSortMode) {
+            RepoSortMode.UPDATED -> repositories.sortedWith(
+                compareByDescending<GithubRepo> { it.updatedAt.orEmpty() }
+                    .thenBy { it.name.lowercase(Locale.getDefault()) }
+            )
+            RepoSortMode.STARS -> repositories.sortedWith(
+                compareByDescending<GithubRepo> { it.stargazersCount }
+                    .thenByDescending { it.watchersCount }
+                    .thenBy { it.name.lowercase(Locale.getDefault()) }
+            )
+            RepoSortMode.NAME -> repositories.sortedBy { it.name.lowercase(Locale.getDefault()) }
+        }
+    }
+
+    private enum class RepoSortMode {
+        UPDATED,
+        STARS,
+        NAME
+    }
+
+    private enum class RepoFilterMode {
+        ALL,
+        STARRED,
+        ISSUES,
+        LICENSED
     }
 }

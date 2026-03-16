@@ -2,6 +2,7 @@ package com.example.githubuserrview.data.repository
 
 import com.example.githubuserrview.api.ApiConfig
 import com.example.githubuserrview.api.ApiService
+import com.example.githubuserrview.data.model.GithubRepo
 import com.example.githubuserrview.data.model.User
 import com.example.githubuserrview.response.DetailUserResponse
 import kotlinx.coroutines.suspendCancellableCoroutine
@@ -59,6 +60,14 @@ class GithubRepository(
             call = apiService.getUserFollowing(username),
             successBody = { response -> response.body() ?: emptyList() },
             defaultError = "Gagal memuat following."
+        )
+    }
+
+    suspend fun getPublicRepositories(username: String): NetworkResult<List<GithubRepo>> {
+        return runRequest(
+            call = apiService.getPublicUserRepos(username),
+            successBody = { response -> response.body() ?: emptyList() },
+            defaultError = "Gagal memuat repository publik."
         )
     }
 
