@@ -35,6 +35,21 @@ class GithubAuthRepository(
     private val gson = Gson()
     private val cacheDao = UserDatabase.getDatabase(context).githubCacheDao()
 
+    data class CachedProfileSnapshot(
+        val profile: DetailUserResponse,
+        val syncedAtEpochMs: Long
+    )
+
+    data class CachedRepositoriesSnapshot(
+        val repositories: List<GithubRepo>,
+        val syncedAtEpochMs: Long?
+    )
+
+    data class CachedRepositorySnapshot(
+        val repository: GithubRepo,
+        val syncedAtEpochMs: Long
+    )
+
     fun getSession(): GithubAuthSession? = authStore.getSession()
 
     suspend fun getCachedProfile(): DetailUserResponse? = withContext(Dispatchers.IO) {
@@ -42,14 +57,46 @@ class GithubAuthRepository(
         cacheDao.getProfile(login)?.toDetailUserResponse()
     }
 
+    suspend fun getCachedProfileSnapshot(): CachedProfileSnapshot? = withContext(Dispatchers.IO) {
+        val login = authStore.getSession()?.login ?: return@withContext null
+        cacheDao.getProfile(login)?.let { cachedProfile ->
+            CachedProfileSnapshot(
+                profile = cachedProfile.toDetailUserResponse(),
+                syncedAtEpochMs = cachedProfile.updatedAtEpochMs
+            )
+        }
+    }
+
     suspend fun getCachedRepositories(): List<GithubRepo> = withContext(Dispatchers.IO) {
         val login = authStore.getSession()?.login ?: return@withContext emptyList()
         cacheDao.getRepositoriesForOwner(login).map(CachedGithubRepo::toGithubRepo)
     }
 
+    suspend fun getCachedRepositoriesSnapshot(): CachedRepositoriesSnapshot = withContext(Dispatchers.IO) {
+        val login = authStore.getSession()?.login ?: return@withContext CachedRepositoriesSnapshot(
+            repositories = emptyList(),
+            syncedAtEpochMs = null
+        )
+        val cachedRepositories = cacheDao.getRepositoriesForOwner(login)
+        CachedRepositoriesSnapshot(
+            repositories = cachedRepositories.map(CachedGithubRepo::toGithubRepo),
+            syncedAtEpochMs = cachedRepositories.maxOfOrNull { it.updatedAtEpochMs }
+        )
+    }
+
     suspend fun getCachedRepository(fullName: String): GithubRepo? = withContext(Dispatchers.IO) {
         cacheDao.getRepository(fullName)?.toGithubRepo()
     }
+
+    suspend fun getCachedRepositorySnapshot(fullName: String): CachedRepositorySnapshot? =
+        withContext(Dispatchers.IO) {
+            cacheDao.getRepository(fullName)?.let { cachedRepository ->
+                CachedRepositorySnapshot(
+                    repository = cachedRepository.toGithubRepo(),
+                    syncedAtEpochMs = cachedRepository.updatedAtEpochMs
+                )
+            }
+        }
 
     suspend fun getAuthenticatedProfile(): NetworkResult<DetailUserResponse> = withContext(Dispatchers.IO) {
         val currentSession = authStore.getSession()

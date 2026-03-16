@@ -58,23 +58,22 @@
                             android:orientation="vertical">
 
                             <TextView
-                                android:id="@+id/tv_repo_detail_name"
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
-                                android:textColor="?attr/appTextPrimary"
-                                android:textSize="24sp"
-                                android:textStyle="bold"
-                                tools:text="GitHubUserRview" />
+                                android:text="@string/repo_detail_owner_label"
+                                android:textColor="?attr/appTextSecondary"
+                                android:textSize="12sp"
+                                android:textStyle="bold" />
 
                             <TextView
-                                android:id="@+id/tv_repo_detail_full_name"
+                                android:id="@+id/tv_repo_owner_login"
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
                                 android:layout_marginTop="4dp"
                                 android:textColor="?attr/colorPrimary"
-                                android:textSize="14sp"
+                                android:textSize="18sp"
                                 android:textStyle="bold"
-                                tools:text="username/GitHubUserRview" />
+                                tools:text="@octocat" />
 
                             <TextView
                                 android:id="@+id/tv_repo_detail_visibility"
@@ -86,6 +85,36 @@
                                 tools:text="Visibility: public" />
                         </LinearLayout>
                     </LinearLayout>
+
+                    <TextView
+                        android:id="@+id/tv_repo_detail_name"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="18dp"
+                        android:textColor="?attr/appTextPrimary"
+                        android:textSize="26sp"
+                        android:textStyle="bold"
+                        tools:text="GitHubUserRview" />
+
+                    <TextView
+                        android:id="@+id/tv_repo_detail_full_name"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
+                        android:textColor="?attr/colorPrimary"
+                        android:textSize="14sp"
+                        android:textStyle="bold"
+                        tools:text="octocat/GitHubUserRview" />
+
+                    <TextView
+                        android:id="@+id/tv_repo_detail_state"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:text="@string/repo_detail_state_live"
+                        android:textColor="?attr/colorPrimary"
+                        android:textSize="12sp"
+                        android:textStyle="bold" />
 
                     <TextView
                         android:id="@+id/tv_repo_detail_description"
@@ -257,6 +286,18 @@
                     </LinearLayout>
 
                     <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btn_repo_open_owner_profile"
+                        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="10dp"
+                        android:text="@string/repo_detail_open_owner_profile_default"
+                        app:cornerRadius="18dp"
+                        app:icon="@drawable/ic_baseline_contact_mail_24"
+                        app:iconTint="?attr/colorPrimary"
+                        app:strokeColor="?attr/colorSecondaryVariant" />
+
+                    <com.google.android.material.button.MaterialButton
                         android:id="@+id/btn_repo_refresh"
                         style="@style/Widget.MaterialComponents.Button.OutlinedButton"
                         android:layout_width="match_parent"
@@ -264,7 +305,7 @@
                         android:layout_marginTop="10dp"
                         android:text="@string/settings_sync_refresh"
                         app:cornerRadius="18dp"
-                        app:icon="@drawable/ic_baseline_search_24"
+                        app:icon="@drawable/ic_refresh"
                         app:iconTint="?attr/colorPrimary"
                         app:strokeColor="?attr/colorSecondaryVariant" />
                 </LinearLayout>

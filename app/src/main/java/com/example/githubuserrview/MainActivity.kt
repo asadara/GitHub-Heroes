@@ -24,6 +24,7 @@ import com.example.githubuserrview.settings.AppThemeManager
 import com.example.githubuserrview.settings.appDataStore
 import com.example.githubuserrview.ui.common.AppHeader
 import com.example.githubuserrview.ui.common.AppNavigator
+import com.example.githubuserrview.ui.common.SyncStatusFormatter
 import com.example.githubuserrview.ui.detail.ResultActivity
 import com.example.githubuserrview.ui.history.RecentSearchActivity
 import kotlinx.coroutines.async
@@ -36,6 +37,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var mainViewModel: MainViewModel
     private val githubAuthRepository by lazy { GithubAuthRepository(this) }
     private var spotlightUsername: String = ""
+    private var lastHomeRefreshEpochMs: Long? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         AppThemeManager.apply(this)
@@ -78,6 +80,7 @@ class MainActivity : AppCompatActivity() {
         binding.tvHomeRepositoriesValue.text = String.format("%,d", totalRepositories)
         binding.tvHomeFollowersValue.text = String.format("%,d", totalFollowers)
         binding.btnHomeSpotlight.isEnabled = false
+        binding.tvHomeLiveState.text = getString(R.string.home_status_loading)
 
         binding.btnHomeSpotlight.setOnClickListener {
             if (spotlightUsername.isNotBlank()) {
@@ -87,6 +90,8 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun loadHomeData() {
+        setHomeRefreshing(true)
+        binding.tvHomeLiveState.text = getString(R.string.home_status_loading)
         lifecycleScope.launch {
             val githubRepository = GithubRepository(
                 ApiConfig.getApiService(githubAuthRepository.getSession()?.accessToken)
@@ -117,13 +122,22 @@ class MainActivity : AppCompatActivity() {
                     } else {
                         showCreatorFallback()
                     }
+                    binding.tvHomeEmpty.text = getString(R.string.home_community_empty)
+                    lastHomeRefreshEpochMs = System.currentTimeMillis()
+                    binding.tvHomeLiveState.text = getString(
+                        R.string.home_status_updated,
+                        SyncStatusFormatter.formatTimestamp(lastHomeRefreshEpochMs!!)
+                    )
                     showListGh(communityPicks)
                 }
                 is NetworkResult.Error -> {
                     showCreatorFallback()
+                    binding.tvHomeEmpty.text = getString(R.string.home_status_error)
+                    binding.tvHomeLiveState.text = getString(R.string.home_status_error)
                     showListGh(emptyList())
                 }
             }
+            setHomeRefreshing(false)
         }
     }
 
@@ -171,6 +185,9 @@ class MainActivity : AppCompatActivity() {
         binding.btnHomeRecent.setOnClickListener {
             AppNavigator.open(this, Intent(this, RecentSearchActivity::class.java))
         }
+        binding.btnHomeRefresh.setOnClickListener {
+            loadHomeData()
+        }
     }
 
     private fun showSelectedItem(user: DetailUserResponse) {
@@ -204,6 +221,11 @@ class MainActivity : AppCompatActivity() {
             binding.recyclerView.visibility = View.GONE
             binding.tvHomeEmpty.visibility = View.GONE
         }
+    }
+
+    private fun setHomeRefreshing(isRefreshing: Boolean) {
+        binding.btnHomeRefresh.isEnabled = !isRefreshing
+        binding.btnHomeRefresh.alpha = if (isRefreshing) 0.6f else 1f
     }
 
     companion object {

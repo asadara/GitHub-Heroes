@@ -1,6 +1,7 @@
 package com.example.githubuserrview.api
 
 import com.example.githubuserrview.data.model.GithubRepo
+import com.example.githubuserrview.data.model.GithubRepoSearchResponse
 import com.example.githubuserrview.data.model.GithubEmail
 import com.example.githubuserrview.data.model.GithubOrganization
 import com.example.githubuserrview.data.model.GithubReadme
@@ -27,6 +28,15 @@ interface ApiService {
         @Query("order") order: String? = null
     ): Call<UserResponse>
 
+    @GET("search/repositories?")
+    fun getSearchRepositories(
+        @Query("q") query: String,
+        @Query("page") page: Int,
+        @Query("per_page") perPage: Int,
+        @Query("sort") sort: String? = null,
+        @Query("order") order: String? = null
+    ): Call<GithubRepoSearchResponse>
+
     @GET("users/{username}")
     fun getDetailUser(@Path("username") username: String): Call<DetailUserResponse>
 
@@ -38,6 +48,13 @@ interface ApiService {
 
     @GET("users/{username}/repos")
     fun getPublicUserRepos(
+        @Path("username") username: String,
+        @Query("sort") sort: String = "updated",
+        @Query("per_page") perPage: Int = 100
+    ): Call<List<GithubRepo>>
+
+    @GET("users/{username}/starred")
+    fun getPublicUserStarredRepos(
         @Path("username") username: String,
         @Query("sort") sort: String = "updated",
         @Query("per_page") perPage: Int = 100

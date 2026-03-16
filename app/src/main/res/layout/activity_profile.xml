@@ -58,6 +58,16 @@
                         android:textColor="?attr/appTextSecondary"
                         android:textSize="13sp" />
 
+                    <TextView
+                        android:id="@+id/tv_profile_sync_state"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:text="@string/profile_sync_state_disconnected"
+                        android:textColor="?attr/colorPrimary"
+                        android:textSize="12sp"
+                        android:textStyle="bold" />
+
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -430,6 +440,16 @@
                                 android:textColor="?attr/appTextSecondary"
                                 android:textSize="13sp"
                                 tools:text="12 repo publik terbaru" />
+
+                            <TextView
+                                android:id="@+id/tv_profile_repo_state"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="6dp"
+                                android:text="@string/profile_repo_state_empty"
+                                android:textColor="?attr/colorPrimary"
+                                android:textSize="12sp"
+                                android:textStyle="bold" />
                         </LinearLayout>
 
                         <com.google.android.material.button.MaterialButton
@@ -439,7 +459,7 @@
                             android:layout_height="wrap_content"
                             android:text="@string/settings_sync_refresh"
                             app:cornerRadius="18dp"
-                            app:icon="@drawable/ic_baseline_search_24"
+                            app:icon="@drawable/ic_refresh"
                             app:iconTint="?attr/colorPrimary"
                             app:strokeColor="?attr/colorSecondaryVariant" />
                     </LinearLayout>

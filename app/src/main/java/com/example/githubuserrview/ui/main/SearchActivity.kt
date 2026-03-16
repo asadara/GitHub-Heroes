@@ -12,10 +12,12 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.LinearLayoutManager
-import com.example.githubuserrview.MyFavorites
 import com.example.githubuserrview.R
+import com.example.githubuserrview.api.ApiConfig
+import com.example.githubuserrview.auth.GithubAuthRepository
+import com.example.githubuserrview.data.model.GithubRepo
 import com.example.githubuserrview.data.model.User
-import com.example.githubuserrview.data.repository.GithubRepositoryProvider
+import com.example.githubuserrview.data.repository.GithubRepository
 import com.example.githubuserrview.databinding.ActivitySearchBinding
 import com.example.githubuserrview.navigation.BottomNavHelper
 import com.example.githubuserrview.settings.AppThemeManager
@@ -25,12 +27,15 @@ import com.example.githubuserrview.ui.common.AppHeader
 import com.example.githubuserrview.ui.common.AppNavigator
 import com.example.githubuserrview.ui.history.RecentSearchActivity
 import com.example.githubuserrview.ui.detail.ResultActivity
+import com.example.githubuserrview.ui.profile.ProfileRepoAdapter
+import com.example.githubuserrview.ui.profile.RepositoryDetailActivity
 
 class SearchActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivitySearchBinding
     private lateinit var viewModel: SearchViewModel
-    private lateinit var adapter: UserAdapter
+    private lateinit var userAdapter: UserAdapter
+    private lateinit var repositoryAdapter: ProfileRepoAdapter
 
     @SuppressLint("SourceLockedOrientationActivity")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -45,16 +50,20 @@ class SearchActivity : AppCompatActivity() {
             R.string.header_search_subtitle
         )
 
-        adapter = UserAdapter()
-        adapter.setOnItemClickCallback(object : UserAdapter.OnItemClickCallback{
+        userAdapter = UserAdapter()
+        userAdapter.setOnItemClickCallback(object : UserAdapter.OnItemClickCallback{
             override fun onItemClicked(data: User) {
                 openResult(data)
             }
         })
+        repositoryAdapter = ProfileRepoAdapter(::openRepository)
+        val githubRepository = GithubRepository(
+            ApiConfig.getApiService(GithubAuthRepository(this).getSession()?.accessToken)
+        )
         viewModel = ViewModelProvider(
             this,
             SearchViewModelFactory(
-                GithubRepositoryProvider.getInstance(),
+                githubRepository,
                 RecentSearchPreferences.getInstance(appDataStore)
             )
         )[SearchViewModel::class.java]
@@ -62,7 +71,7 @@ class SearchActivity : AppCompatActivity() {
         binding.apply {
             recyclerViewRetro.layoutManager = LinearLayoutManager(this@SearchActivity)
             recyclerViewRetro.setHasFixedSize(true)
-            recyclerViewRetro.adapter = adapter
+            recyclerViewRetro.adapter = userAdapter
             lottieNotFound.visibility = View.GONE
             layoutSearchPagination.visibility = View.GONE
             btnRecentSearches.setOnClickListener {
@@ -73,6 +82,14 @@ class SearchActivity : AppCompatActivity() {
             }
             btnSearch.setOnClickListener {
                 submitSearch()
+            }
+            searchModeToggle.addOnButtonCheckedListener { _, checkedId, isChecked ->
+                if (!isChecked) return@addOnButtonCheckedListener
+                val mode = when (checkedId) {
+                    R.id.btn_mode_repositories -> SearchMode.REPOSITORIES
+                    else -> SearchMode.USERS
+                }
+                viewModel.setSearchMode(mode)
             }
             btnPrevPage.setOnClickListener {
                 viewModel.loadPreviousPage()
@@ -92,11 +109,22 @@ class SearchActivity : AppCompatActivity() {
 
         viewModel.getSearchUser().observe(this) {
             val users = it ?: arrayListOf()
-            adapter.setList(users)
-            showEmptyState(users.isEmpty())
+            if (viewModel.getSearchMode().value == SearchMode.USERS) {
+                userAdapter.setList(users)
+                showEmptyState(users.isEmpty())
+            }
+        }
+
+        viewModel.getSearchRepositories().observe(this) {
+            if (viewModel.getSearchMode().value == SearchMode.REPOSITORIES) {
+                repositoryAdapter.submitList(it ?: emptyList())
+                showEmptyState(it.isNullOrEmpty())
+            }
         }
 
         viewModel.getPaginationState().observe(this, ::renderPagination)
+
+        viewModel.getSearchMode().observe(this, ::renderSearchMode)
 
         viewModel.getLoadingState().observe(this) {
             showLoading(it)
@@ -122,12 +150,13 @@ class SearchActivity : AppCompatActivity() {
         binding.etSearch.setText(query.orEmpty())
 
         if (query.isNullOrBlank()) {
-            binding.searchFor.text = getString(R.string.search_idle_title)
+            updateSearchTitle("")
             binding.tvSearchResultMeta.text = getString(R.string.search_result_idle_meta)
             showLoading(false)
             showEmptyState(false)
             renderPagination(SearchPaginationState())
-            adapter.setList(arrayListOf())
+            userAdapter.setList(arrayListOf())
+            repositoryAdapter.submitList(emptyList())
             return
         }
 
@@ -137,7 +166,7 @@ class SearchActivity : AppCompatActivity() {
     private fun submitSearch() {
         val query = binding.etSearch.text?.toString()?.trim().orEmpty()
         if (query.isBlank()) {
-            binding.searchFor.text = getString(R.string.search_idle_title)
+            updateSearchTitle("")
             binding.tvSearchResultMeta.text = getString(R.string.search_result_idle_meta)
             showLoading(false)
             showEmptyState(false)
@@ -154,10 +183,10 @@ class SearchActivity : AppCompatActivity() {
     }
 
     private fun runSearch(query: String) {
-        binding.searchFor.text = getString(R.string.tv_search_for, query)
+        updateSearchTitle(query)
         binding.tvSearchResultMeta.text = getString(R.string.search_result_loading_meta)
         showEmptyState(false)
-        viewModel.setSearchUsers(query)
+        viewModel.setSearchQuery(query)
     }
 
     private fun openResult(data: User) {
@@ -168,6 +197,18 @@ class SearchActivity : AppCompatActivity() {
                 data.login,
                 data.id,
                 data.avatar_url
+            )
+        )
+    }
+
+    private fun openRepository(repository: GithubRepo) {
+        AppNavigator.open(
+            this,
+            RepositoryDetailActivity.createIntent(
+                this,
+                repository.owner.login,
+                repository.name,
+                repository.fullName
             )
         )
     }
@@ -190,6 +231,50 @@ class SearchActivity : AppCompatActivity() {
     private fun showEmptyState(isEmpty: Boolean) {
         binding.lottieNotFound.visibility = if (isEmpty) View.VISIBLE else View.GONE
         binding.recyclerViewRetro.visibility = if (isEmpty) View.GONE else View.VISIBLE
+    }
+
+    private fun renderSearchMode(mode: SearchMode) {
+        binding.recyclerViewRetro.adapter =
+            if (mode == SearchMode.USERS) userAdapter else repositoryAdapter
+        binding.searchInputLayout.hint = getString(
+            if (mode == SearchMode.USERS) {
+                R.string.search_input_hint_users
+            } else {
+                R.string.search_input_hint_repositories
+            }
+        )
+        updateSearchTitle(binding.etSearch.text?.toString()?.trim().orEmpty())
+        val queryIsBlank = binding.etSearch.text?.toString()?.trim().isNullOrEmpty()
+        val hasItems = if (mode == SearchMode.USERS) {
+            userAdapter.itemCount > 0
+        } else {
+            repositoryAdapter.itemCount > 0
+        }
+        showEmptyState(!queryIsBlank && !binding.cardSearchLoading.isShown && !hasItems)
+        binding.btnModeUsers.alpha = if (mode == SearchMode.USERS) 1f else 0.72f
+        binding.btnModeRepositories.alpha = if (mode == SearchMode.REPOSITORIES) 1f else 0.72f
+    }
+
+    private fun updateSearchTitle(query: String) {
+        val mode = viewModel.getSearchMode().value ?: SearchMode.USERS
+        binding.searchFor.text = if (query.isBlank()) {
+            getString(
+                if (mode == SearchMode.USERS) {
+                    R.string.search_idle_title_users
+                } else {
+                    R.string.search_idle_title_repositories
+                }
+            )
+        } else {
+            getString(
+                if (mode == SearchMode.USERS) {
+                    R.string.search_result_users_for
+                } else {
+                    R.string.search_result_repositories_for
+                },
+                query
+            )
+        }
     }
 
     private fun renderPagination(state: SearchPaginationState) {

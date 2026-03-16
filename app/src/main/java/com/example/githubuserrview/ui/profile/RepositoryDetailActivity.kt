@@ -25,6 +25,8 @@ import com.example.githubuserrview.databinding.ActivityRepositoryDetailBinding
 import com.example.githubuserrview.settings.AppThemeManager
 import com.example.githubuserrview.ui.common.AppHeader
 import com.example.githubuserrview.ui.common.AppNavigator
+import com.example.githubuserrview.ui.common.SyncStatusFormatter
+import com.example.githubuserrview.ui.detail.ResultActivity
 import com.google.android.material.chip.Chip
 import com.google.android.material.chip.ChipGroup
 import java.text.SimpleDateFormat
@@ -62,10 +64,19 @@ class RepositoryDetailActivity : AppCompatActivity() {
         binding.btnRepoOpenHomepage.setOnClickListener {
             openExternalUrl(currentRepository?.homepage)
         }
+        binding.btnRepoOpenOwnerProfile.setOnClickListener {
+            currentRepository?.owner?.login?.takeIf { it.isNotBlank() }?.let { ownerLogin ->
+                AppNavigator.open(
+                    this,
+                    ResultActivity.createIntent(this, ownerLogin)
+                )
+            }
+        }
         binding.btnRepoRefresh.setOnClickListener {
             loadRepository(owner, repositoryName, fullName, showRefreshToast = true)
         }
 
+        setRefreshEnabled(false)
         loadRepository(owner, repositoryName, fullName, showRefreshToast = false)
     }
 
@@ -82,8 +93,16 @@ class RepositoryDetailActivity : AppCompatActivity() {
         }
 
         showLoading(true)
+        setRefreshEnabled(false)
         lifecycleScope.launch {
-            githubAuthRepository.getCachedRepository(fullName)?.let(::bindRepository)
+            val cachedSnapshot = githubAuthRepository.getCachedRepositorySnapshot(fullName)
+            cachedSnapshot?.let { snapshot ->
+                bindRepository(snapshot.repository)
+                renderRepositoryState(
+                    source = SyncSource.CACHE,
+                    lastSyncEpochMs = snapshot.syncedAtEpochMs
+                )
+            }
 
             val detailDeferred = async {
                 githubAuthRepository.getRepositoryDetail(owner, repositoryName)
@@ -105,10 +124,21 @@ class RepositoryDetailActivity : AppCompatActivity() {
             }
 
             when (val result = detailDeferred.await()) {
-                is NetworkResult.Success -> bindRepository(result.data)
+                is NetworkResult.Success -> {
+                    bindRepository(result.data)
+                    renderRepositoryState(
+                        source = SyncSource.LIVE,
+                        lastSyncEpochMs = System.currentTimeMillis()
+                    )
+                }
                 is NetworkResult.Error -> {
                     if (currentRepository == null) {
                         showToast(result.message)
+                    } else {
+                        renderRepositoryState(
+                            source = SyncSource.CACHE_ERROR,
+                            lastSyncEpochMs = cachedSnapshot?.syncedAtEpochMs
+                        )
                     }
                 }
             }
@@ -142,6 +172,7 @@ class RepositoryDetailActivity : AppCompatActivity() {
                 showToast(getString(R.string.repo_detail_refreshed))
             }
             showLoading(false)
+            setRefreshEnabled(currentRepository != null)
         }
     }
 
@@ -153,6 +184,10 @@ class RepositoryDetailActivity : AppCompatActivity() {
             .centerCrop()
             .into(binding.ivRepoOwnerAvatar)
 
+        binding.tvRepoOwnerLogin.text = getString(
+            R.string.detail_username_format,
+            repository.owner.login
+        )
         binding.tvRepoDetailName.text = repository.name
         binding.tvRepoDetailFullName.text = repository.fullName
         binding.tvRepoDetailDescription.text = repository.description
@@ -187,8 +222,13 @@ class RepositoryDetailActivity : AppCompatActivity() {
             R.string.repo_detail_updated,
             formatUpdatedAt(repository.updatedAt)
         )
+        binding.btnRepoOpenOwnerProfile.text = getString(
+            R.string.repo_detail_open_owner_profile,
+            repository.owner.login
+        )
         binding.btnRepoOpenHomepage.isEnabled = !repository.homepage.isNullOrBlank()
         binding.btnRepoOpenHomepage.alpha = if (repository.homepage.isNullOrBlank()) 0.55f else 1f
+        setRefreshEnabled(true)
     }
 
     private fun bindReadme(readme: GithubReadme?) {
@@ -294,6 +334,30 @@ class RepositoryDetailActivity : AppCompatActivity() {
         binding.repoDetailLoading.visibility = if (isLoading) View.VISIBLE else View.GONE
     }
 
+    private fun renderRepositoryState(source: SyncSource, lastSyncEpochMs: Long?) {
+        binding.tvRepoDetailState.text = when (source) {
+            SyncSource.LIVE -> lastSyncEpochMs?.let {
+                getString(
+                    R.string.repo_detail_state_live_updated,
+                    SyncStatusFormatter.formatTimestamp(it)
+                )
+            } ?: getString(R.string.repo_detail_state_live)
+            SyncSource.CACHE -> lastSyncEpochMs?.let {
+                getString(
+                    R.string.repo_detail_state_cache_updated,
+                    SyncStatusFormatter.formatTimestamp(it)
+                )
+            } ?: getString(R.string.repo_detail_state_cache)
+            SyncSource.CACHE_ERROR -> getString(R.string.repo_detail_state_cache_error)
+        }
+    }
+
+    private fun setRefreshEnabled(isEnabled: Boolean) {
+        binding.btnRepoRefresh.isEnabled = isEnabled
+        binding.btnRepoOpenGithub.isEnabled = isEnabled && currentRepository != null
+        binding.btnRepoOpenOwnerProfile.isEnabled = isEnabled && currentRepository != null
+    }
+
     private fun formatUpdatedAt(rawDate: String?): String {
         if (rawDate.isNullOrBlank()) {
             return getString(R.string.detail_joined_unknown)
@@ -364,5 +428,11 @@ class RepositoryDetailActivity : AppCompatActivity() {
                 putExtra(EXTRA_FULL_NAME, fullName)
             }
         }
+    }
+
+    private enum class SyncSource {
+        LIVE,
+        CACHE,
+        CACHE_ERROR
     }
 }

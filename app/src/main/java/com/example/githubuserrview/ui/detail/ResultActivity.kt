@@ -29,6 +29,7 @@ import com.example.githubuserrview.settings.ActiveProfileStore
 import com.example.githubuserrview.settings.AppThemeManager
 import com.example.githubuserrview.ui.common.AppHeader
 import com.example.githubuserrview.ui.common.AppNavigator
+import com.example.githubuserrview.ui.common.SyncStatusFormatter
 import com.example.githubuserrview.ui.profile.ProfileRepoAdapter
 import com.example.githubuserrview.ui.profile.RepositoryDetailActivity
 import com.google.android.material.tabs.TabLayout
@@ -53,6 +54,7 @@ class ResultActivity : AppCompatActivity() {
     private val publicRepoAdapter by lazy { ProfileRepoAdapter(::openRepository) }
     private var currentUser: DetailUserResponse? = null
     private var isFavorite = false
+    private var requestedUsername: String = ""
 
     @SuppressLint("SourceLockedOrientationActivity")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -62,6 +64,7 @@ class ResultActivity : AppCompatActivity() {
         setContentView(binding.root)
 
         val username = intent.getStringExtra(EXTRA_USERNAME)?.trim()
+        requestedUsername = username.orEmpty()
 
         AppHeader.apply(
             this,
@@ -76,7 +79,12 @@ class ResultActivity : AppCompatActivity() {
             isNestedScrollingEnabled = false
             adapter = publicRepoAdapter
         }
+        binding.btnPublicProfileRefresh.setOnClickListener {
+            refreshPublicProfile()
+        }
         bindPublicRepositories(emptyList())
+        renderPublicProfileState(isError = false, timestamp = null)
+        renderPublicRepositoriesState(isError = false, timestamp = null)
 
         viewModel.getDetailUser().observe(this) { user ->
             if (user != null) {
@@ -86,6 +94,8 @@ class ResultActivity : AppCompatActivity() {
         viewModel.getLoadingState().observe(this, ::showLoading)
         viewModel.getErrorMessage().observe(this) {
             if (!it.isNullOrBlank()) {
+                renderPublicProfileState(isError = true, timestamp = null)
+                setRefreshingState(false)
                 Toast.makeText(this, it, Toast.LENGTH_SHORT).show()
             }
         }
@@ -114,6 +124,7 @@ class ResultActivity : AppCompatActivity() {
 
         if (!username.isNullOrBlank()) {
             ActiveProfileStore.save(this, username)
+            setRefreshingState(true)
             viewModel.loadUserDetail(username)
         } else {
             showLoading(false)
@@ -171,6 +182,10 @@ class ResultActivity : AppCompatActivity() {
                 .centerCrop()
                 .into(ivDetailPhoto)
         }
+        renderPublicProfileState(
+            isError = false,
+            timestamp = System.currentTimeMillis()
+        )
 
         updateFavoriteState(user.id)
         setupActions(user, blogUrl)
@@ -298,22 +313,74 @@ class ResultActivity : AppCompatActivity() {
     private fun loadPublicRepositories(username: String) {
         CoroutineScope(Dispatchers.Main).launch {
             when (val result = githubRepository.getPublicRepositories(username)) {
-                is NetworkResult.Success -> bindPublicRepositories(result.data)
-                is NetworkResult.Error -> bindPublicRepositories(emptyList())
+                is NetworkResult.Success -> {
+                    bindPublicRepositories(result.data)
+                    renderPublicRepositoriesState(
+                        isError = false,
+                        timestamp = System.currentTimeMillis()
+                    )
+                }
+                is NetworkResult.Error -> {
+                    bindPublicRepositories(
+                        repositories = emptyList(),
+                        emptyMessage = result.message
+                    )
+                    renderPublicRepositoriesState(isError = true, timestamp = null)
+                }
             }
+            setRefreshingState(false)
         }
     }
 
-    private fun bindPublicRepositories(repositories: List<GithubRepo>) {
+    private fun bindPublicRepositories(
+        repositories: List<GithubRepo>,
+        emptyMessage: String = getString(R.string.public_repo_empty)
+    ) {
         publicRepoAdapter.submitList(repositories)
         binding.tvPublicRepoSectionMeta.text = getString(
             R.string.public_repo_count,
             repositories.size
         )
+        binding.tvPublicRepoEmpty.text = emptyMessage
         binding.tvPublicRepoEmpty.visibility =
             if (repositories.isEmpty()) View.VISIBLE else View.GONE
         binding.recyclerPublicRepos.visibility =
             if (repositories.isEmpty()) View.GONE else View.VISIBLE
+    }
+
+    private fun refreshPublicProfile() {
+        if (requestedUsername.isBlank()) return
+        setRefreshingState(true)
+        renderPublicProfileState(isError = false, timestamp = null)
+        renderPublicRepositoriesState(isError = false, timestamp = null)
+        viewModel.loadUserDetail(requestedUsername)
+    }
+
+    private fun renderPublicProfileState(isError: Boolean, timestamp: Long?) {
+        binding.tvPublicProfileState.text = when {
+            isError -> getString(R.string.detail_profile_state_error)
+            timestamp != null -> getString(
+                R.string.detail_profile_state_updated,
+                SyncStatusFormatter.formatTimestamp(timestamp)
+            )
+            else -> getString(R.string.detail_profile_state_live)
+        }
+    }
+
+    private fun renderPublicRepositoriesState(isError: Boolean, timestamp: Long?) {
+        binding.tvPublicRepoState.text = when {
+            isError -> getString(R.string.detail_public_repo_state_error)
+            timestamp != null -> getString(
+                R.string.detail_public_repo_state_updated,
+                SyncStatusFormatter.formatTimestamp(timestamp)
+            )
+            else -> getString(R.string.detail_public_repo_state_live)
+        }
+    }
+
+    private fun setRefreshingState(isRefreshing: Boolean) {
+        binding.btnPublicProfileRefresh.isEnabled = !isRefreshing
+        binding.btnPublicProfileRefresh.alpha = if (isRefreshing) 0.6f else 1f
     }
 
     private fun openRepository(repository: GithubRepo) {
@@ -377,7 +444,8 @@ class ResultActivity : AppCompatActivity() {
         @StringRes
         private val TAB_TITLES = intArrayOf(
             R.string.tab_text_1,
-            R.string.tab_text_2
+            R.string.tab_text_2,
+            R.string.tab_text_3
         )
     }
 }

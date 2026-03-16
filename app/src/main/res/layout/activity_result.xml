@@ -127,6 +127,22 @@
                             app:layout_constraintStart_toEndOf="@id/iv_detail_photo"
                             app:layout_constraintTop_toBottomOf="@id/tv_detail_id"
                             tools:text="User | Joined January 2010" />
+
+                        <TextView
+                            android:id="@+id/tv_public_profile_state"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="16dp"
+                            android:layout_marginTop="6dp"
+                            android:layout_marginEnd="16dp"
+                            android:text="@string/detail_profile_state_live"
+                            android:textColor="?attr/colorPrimary"
+                            android:textSize="12sp"
+                            android:textStyle="bold"
+                            app:layout_constraintEnd_toStartOf="@id/toggleFav"
+                            app:layout_constraintStart_toEndOf="@id/iv_detail_photo"
+                            app:layout_constraintTop_toBottomOf="@id/tv_profile_type"
+                            tools:text="Live GitHub profile" />
                     </androidx.constraintlayout.widget.ConstraintLayout>
 
                     <LinearLayout
@@ -502,19 +518,55 @@
                 app:strokeColor="?attr/appStrokeColor"
                 app:strokeWidth="1dp">
 
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:padding="18dp">
-
-                    <TextView
+                    <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="@string/public_repo_section_title"
-                        android:textColor="?attr/appTextPrimary"
-                        android:textSize="18sp"
-                        android:textStyle="bold" />
+                        android:orientation="vertical"
+                        android:padding="18dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+
+                            <TextView
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:text="@string/public_repo_section_title"
+                                android:textColor="?attr/appTextPrimary"
+                                android:textSize="18sp"
+                                android:textStyle="bold" />
+
+                            <TextView
+                                android:id="@+id/tv_public_repo_state"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="6dp"
+                                android:text="@string/detail_public_repo_state_live"
+                                android:textColor="?attr/colorPrimary"
+                                android:textSize="12sp"
+                                android:textStyle="bold"
+                                tools:text="Live public repositories" />
+                        </LinearLayout>
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btn_public_profile_refresh"
+                            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/detail_public_repo_refresh"
+                            app:cornerRadius="18dp"
+                            app:icon="@drawable/ic_refresh"
+                            app:iconTint="?attr/colorPrimary"
+                            app:strokeColor="?attr/colorSecondaryVariant" />
+                    </LinearLayout>
 
                     <TextView
                         android:id="@+id/tv_public_repo_section_meta"

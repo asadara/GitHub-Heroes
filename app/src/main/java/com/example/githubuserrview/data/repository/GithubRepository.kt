@@ -39,6 +39,29 @@ class GithubRepository(
         )
     }
 
+    suspend fun searchRepositories(
+        query: String,
+        page: Int,
+        perPage: Int,
+        sort: String? = null,
+        order: String? = null
+    ): NetworkResult<SearchRepositoriesPage> {
+        return runRequest(
+            call = apiService.getSearchRepositories(query, page, perPage, sort, order),
+            successBody = { response ->
+                response.body()?.let {
+                    SearchRepositoriesPage(
+                        totalCount = it.totalCount,
+                        items = it.items,
+                        page = page,
+                        perPage = perPage
+                    )
+                }
+            },
+            defaultError = "Gagal memuat repository dari pencarian."
+        )
+    }
+
     suspend fun getUserDetail(username: String): NetworkResult<DetailUserResponse> {
         return runRequest(
             call = apiService.getDetailUser(username),
@@ -68,6 +91,14 @@ class GithubRepository(
             call = apiService.getPublicUserRepos(username),
             successBody = { response -> response.body() ?: emptyList() },
             defaultError = "Gagal memuat repository publik."
+        )
+    }
+
+    suspend fun getPublicStarredRepositories(username: String): NetworkResult<List<GithubRepo>> {
+        return runRequest(
+            call = apiService.getPublicUserStarredRepos(username),
+            successBody = { response -> response.body() ?: emptyList() },
+            defaultError = "Gagal memuat starred repositories."
         )
     }
 

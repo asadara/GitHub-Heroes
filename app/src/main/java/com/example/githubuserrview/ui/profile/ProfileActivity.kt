@@ -25,6 +25,7 @@ import com.example.githubuserrview.settings.ActiveProfileStore
 import com.example.githubuserrview.settings.AppThemeManager
 import com.example.githubuserrview.ui.common.AppHeader
 import com.example.githubuserrview.ui.common.AppNavigator
+import com.example.githubuserrview.ui.common.SyncStatusFormatter
 import com.example.githubuserrview.ui.detail.ResultActivity
 import com.example.githubuserrview.ui.history.RecentSearchActivity
 import com.example.githubuserrview.ui.settings.SettingsActivity
@@ -44,6 +45,10 @@ class ProfileActivity : AppCompatActivity() {
     private var allRepositories: List<GithubRepo> = emptyList()
     private var repoSortMode: RepoSortMode = RepoSortMode.UPDATED
     private var repoFilterMode: RepoFilterMode = RepoFilterMode.ALL
+    private var latestProfileSyncEpochMs: Long? = null
+    private var latestRepositorySyncEpochMs: Long? = null
+    private var currentProfileSyncSource: SyncSource? = null
+    private var currentRepositorySyncSource: SyncSource? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         AppThemeManager.apply(this)
@@ -101,10 +106,27 @@ class ProfileActivity : AppCompatActivity() {
 
         showLoading(true)
         lifecycleScope.launch {
-            githubAuthRepository.getCachedProfile()?.let(::bindProfileDetail)
-            val cachedRepos = githubAuthRepository.getCachedRepositories()
-            if (cachedRepos.isNotEmpty()) {
-                bindRepositories(cachedRepos)
+            val cachedProfileSnapshot = githubAuthRepository.getCachedProfileSnapshot()
+            val cachedRepositoriesSnapshot = githubAuthRepository.getCachedRepositoriesSnapshot()
+
+            cachedProfileSnapshot?.let { snapshot ->
+                bindProfileDetail(snapshot.profile)
+                renderProfileSyncState(
+                    source = SyncSource.CACHE,
+                    lastSyncEpochMs = snapshot.syncedAtEpochMs
+                )
+            }
+            if (cachedRepositoriesSnapshot.repositories.isNotEmpty()) {
+                bindRepositories(cachedRepositoriesSnapshot.repositories)
+                renderRepositorySyncState(
+                    source = SyncSource.CACHE,
+                    lastSyncEpochMs = cachedRepositoriesSnapshot.syncedAtEpochMs
+                )
+            } else {
+                renderRepositorySyncState(
+                    source = SyncSource.CACHE,
+                    lastSyncEpochMs = cachedRepositoriesSnapshot.syncedAtEpochMs
+                )
             }
 
             val profileDeferred = async { githubAuthRepository.getAuthenticatedProfile() }
@@ -122,19 +144,48 @@ class ProfileActivity : AppCompatActivity() {
             when (profileResult) {
                 is NetworkResult.Success -> {
                     bindProfileDetail(profileResult.data)
+                    renderProfileSyncState(
+                        source = SyncSource.LIVE,
+                        lastSyncEpochMs = System.currentTimeMillis()
+                    )
                     ActiveProfileStore.save(this@ProfileActivity, profileResult.data.login)
                 }
                 is NetworkResult.Error -> {
-                    showSignedOutState()
+                    if (cachedProfileSnapshot == null) {
+                        showSignedOutState()
+                        showToast(profileResult.message)
+                        return@launch
+                    }
+                    renderProfileSyncState(
+                        source = SyncSource.CACHE_ERROR,
+                        lastSyncEpochMs = cachedProfileSnapshot.syncedAtEpochMs
+                    )
                     showToast(profileResult.message)
-                    return@launch
                 }
             }
 
             when (repoResult) {
-                is NetworkResult.Success -> bindRepositories(repoResult.data)
+                is NetworkResult.Success -> {
+                    bindRepositories(repoResult.data)
+                    renderRepositorySyncState(
+                        source = SyncSource.LIVE,
+                        lastSyncEpochMs = System.currentTimeMillis()
+                    )
+                }
                 is NetworkResult.Error -> {
-                    bindRepositories(emptyList())
+                    if (cachedRepositoriesSnapshot.repositories.isNotEmpty()) {
+                        bindRepositories(cachedRepositoriesSnapshot.repositories)
+                        renderRepositorySyncState(
+                            source = SyncSource.CACHE_ERROR,
+                            lastSyncEpochMs = cachedRepositoriesSnapshot.syncedAtEpochMs
+                        )
+                    } else {
+                        bindRepositories(emptyList())
+                        renderRepositorySyncState(
+                            source = SyncSource.CACHE,
+                            lastSyncEpochMs = cachedRepositoriesSnapshot.syncedAtEpochMs
+                        )
+                    }
                 }
             }
 
@@ -172,6 +223,7 @@ class ProfileActivity : AppCompatActivity() {
         if (session == null) {
             binding.tvProfileSyncStatus.text = getString(R.string.profile_sync_status_disconnected)
             binding.tvProfileSyncMeta.text = getString(R.string.profile_sync_meta_disconnected)
+            binding.tvProfileSyncState.text = getString(R.string.profile_sync_state_disconnected)
             binding.btnProfileOpenGithub.isEnabled = false
             return
         }
@@ -182,6 +234,11 @@ class ProfileActivity : AppCompatActivity() {
             session.name ?: session.login,
             session.scope.ifBlank { "read:user" }
         )
+        currentProfileSyncSource?.let { source ->
+            renderProfileSyncState(source, latestProfileSyncEpochMs)
+        } ?: run {
+            binding.tvProfileSyncState.text = getString(R.string.profile_sync_state_live)
+        }
         binding.btnProfileOpenGithub.isEnabled = true
     }
 
@@ -312,6 +369,10 @@ class ProfileActivity : AppCompatActivity() {
         binding.tvProfileFollowers.text = "0"
         binding.tvProfileFollowing.text = "0"
         binding.tvProfileRepos.text = "0"
+        latestProfileSyncEpochMs = null
+        latestRepositorySyncEpochMs = null
+        currentProfileSyncSource = null
+        currentRepositorySyncSource = null
         allRepositories = emptyList()
         binding.etProfileRepoSearch.setText("")
         binding.chipRepoSortUpdated.isChecked = true
@@ -331,6 +392,8 @@ class ProfileActivity : AppCompatActivity() {
             emptyLabel = getString(R.string.profile_emails_empty)
         )
         binding.btnProfileOpenGithub.isEnabled = false
+        binding.tvProfileSyncState.text = getString(R.string.profile_sync_state_disconnected)
+        binding.tvProfileRepoState.text = getString(R.string.profile_repo_state_empty)
     }
 
     private fun showLoading(isLoading: Boolean) {
@@ -440,6 +503,46 @@ class ProfileActivity : AppCompatActivity() {
         }
     }
 
+    private fun renderProfileSyncState(source: SyncSource, lastSyncEpochMs: Long?) {
+        currentProfileSyncSource = source
+        latestProfileSyncEpochMs = lastSyncEpochMs
+        binding.tvProfileSyncState.text = when (source) {
+            SyncSource.LIVE -> lastSyncEpochMs?.let {
+                getString(
+                    R.string.profile_sync_state_live_updated,
+                    SyncStatusFormatter.formatTimestamp(it)
+                )
+            } ?: getString(R.string.profile_sync_state_live)
+            SyncSource.CACHE -> lastSyncEpochMs?.let {
+                getString(
+                    R.string.profile_sync_state_cache_updated,
+                    SyncStatusFormatter.formatTimestamp(it)
+                )
+            } ?: getString(R.string.profile_sync_state_cache)
+            SyncSource.CACHE_ERROR -> getString(R.string.profile_sync_state_cache_error)
+        }
+    }
+
+    private fun renderRepositorySyncState(source: SyncSource, lastSyncEpochMs: Long?) {
+        currentRepositorySyncSource = source
+        latestRepositorySyncEpochMs = lastSyncEpochMs
+        binding.tvProfileRepoState.text = when (source) {
+            SyncSource.LIVE -> lastSyncEpochMs?.let {
+                getString(
+                    R.string.profile_repo_state_live_updated,
+                    SyncStatusFormatter.formatTimestamp(it)
+                )
+            } ?: getString(R.string.profile_repo_state_live)
+            SyncSource.CACHE -> lastSyncEpochMs?.let {
+                getString(
+                    R.string.profile_repo_state_cache_updated,
+                    SyncStatusFormatter.formatTimestamp(it)
+                )
+            } ?: getString(R.string.profile_repo_state_empty)
+            SyncSource.CACHE_ERROR -> getString(R.string.profile_repo_state_cache_error)
+        }
+    }
+
     private fun matchesRepositoryFilter(repository: GithubRepo): Boolean {
         return when (repoFilterMode) {
             RepoFilterMode.ALL -> true
@@ -494,5 +597,11 @@ class ProfileActivity : AppCompatActivity() {
         STARRED,
         ISSUES,
         LICENSED
+    }
+
+    private enum class SyncSource {
+        LIVE,
+        CACHE,
+        CACHE_ERROR
     }
 }

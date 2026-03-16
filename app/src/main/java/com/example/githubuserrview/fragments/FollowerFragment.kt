@@ -48,6 +48,8 @@ class FollowerFragment : Fragment(R.layout.fragment_follower) {
         viewModel.getListFollowers().observe(viewLifecycleOwner) {
             if (it != null){
                 adapter.setList(it)
+                binding.tvFollowersEmpty.visibility = if (it.isEmpty()) View.VISIBLE else View.GONE
+                binding.recyclerViewFollowers.visibility = if (it.isEmpty()) View.GONE else View.VISIBLE
             }
         }
         viewModel.getLoadingState().observe(viewLifecycleOwner, ::showLoading)
