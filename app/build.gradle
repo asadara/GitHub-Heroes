@@ -5,6 +5,32 @@ plugins {
     id 'kotlin-kapt'
 }
 
+def localProperties = new Properties()
+def localPropertiesFile = rootProject.file('local.properties')
+if (localPropertiesFile.exists()) {
+    localPropertiesFile.withInputStream { stream ->
+        localProperties.load(stream)
+    }
+}
+
+def resolveConfigValue = { String key, String fallback = '' ->
+    def envValue = System.getenv(key)
+    if (envValue != null && !envValue.trim().isEmpty()) {
+        return envValue.trim()
+    }
+
+    def propertyValue = localProperties.getProperty(key)
+    if (propertyValue != null && !propertyValue.trim().isEmpty()) {
+        return propertyValue.trim()
+    }
+
+    return fallback
+}
+
+def asBuildConfigString = { String value ->
+    '"' + value.replace('\\', '\\\\').replace('"', '\\"') + '"'
+}
+
 android {
     compileSdk 31
 
@@ -16,6 +42,26 @@ android {
         versionName "1.0"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+
+        def githubClientId = resolveConfigValue('GITHUB_CLIENT_ID')
+        def githubClientSecret = resolveConfigValue('GITHUB_CLIENT_SECRET')
+        def githubRedirectScheme = resolveConfigValue('GITHUB_REDIRECT_SCHEME', 'githubuserrview')
+        def githubRedirectHost = resolveConfigValue('GITHUB_REDIRECT_HOST', 'auth')
+        def githubRedirectPath = resolveConfigValue('GITHUB_REDIRECT_PATH', '/callback')
+        def githubAuthScopes = resolveConfigValue('GITHUB_AUTH_SCOPES', 'read:user user:email')
+
+        buildConfigField 'String', 'GITHUB_CLIENT_ID', asBuildConfigString(githubClientId)
+        buildConfigField 'String', 'GITHUB_CLIENT_SECRET', asBuildConfigString(githubClientSecret)
+        buildConfigField 'String', 'GITHUB_REDIRECT_SCHEME', asBuildConfigString(githubRedirectScheme)
+        buildConfigField 'String', 'GITHUB_REDIRECT_HOST', asBuildConfigString(githubRedirectHost)
+        buildConfigField 'String', 'GITHUB_REDIRECT_PATH', asBuildConfigString(githubRedirectPath)
+        buildConfigField 'String', 'GITHUB_AUTH_SCOPES', asBuildConfigString(githubAuthScopes)
+
+        manifestPlaceholders = [
+            githubRedirectScheme: githubRedirectScheme,
+            githubRedirectHost: githubRedirectHost,
+            githubRedirectPath: githubRedirectPath
+        ]
     }
 
     buildTypes {

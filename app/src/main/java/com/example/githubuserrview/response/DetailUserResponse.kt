@@ -38,7 +38,7 @@ data class DetailUserResponse(
     val publicGists: Int,
 
     @field:SerializedName("email")
-    val email: Any,
+    val email: String?,
 
     @field:SerializedName("organizations_url")
     val organizationsUrl: String,

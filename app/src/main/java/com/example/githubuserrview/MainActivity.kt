@@ -1,6 +1,5 @@
 package com.example.githubuserrview
 
-import android.annotation.SuppressLint
 import android.content.Intent
 import android.content.res.Configuration
 import android.os.Bundle
@@ -10,10 +9,11 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.LinearLayoutManager
-import com.example.githubuserrview.adapter.PackageAdapter
-import com.example.githubuserrview.api.Package
+import com.example.githubuserrview.adapter.HomeCommunityAdapter
+import com.example.githubuserrview.api.ApiConfig
+import com.example.githubuserrview.auth.GithubAuthRepository
 import com.example.githubuserrview.databinding.ActivityMainBinding
-import com.example.githubuserrview.data.repository.GithubRepositoryProvider
+import com.example.githubuserrview.data.repository.GithubRepository
 import com.example.githubuserrview.data.repository.NetworkResult
 import com.example.githubuserrview.model.MainViewModel
 import com.example.githubuserrview.model.ViewModelFactory
@@ -26,15 +26,16 @@ import com.example.githubuserrview.ui.common.AppHeader
 import com.example.githubuserrview.ui.common.AppNavigator
 import com.example.githubuserrview.ui.detail.ResultActivity
 import com.example.githubuserrview.ui.history.RecentSearchActivity
+import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
-import kotlin.collections.ArrayList
 import com.bumptech.glide.Glide
+import android.view.View
 
 class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
     private lateinit var mainViewModel: MainViewModel
-    private val profiles: ArrayList<Package> by lazy { listGitHub }
-    private val githubRepository by lazy { GithubRepositoryProvider.getInstance() }
+    private val githubAuthRepository by lazy { GithubAuthRepository(this) }
+    private var spotlightUsername: String = ""
 
     override fun onCreate(savedInstanceState: Bundle?) {
         AppThemeManager.apply(this)
@@ -57,75 +58,78 @@ class MainActivity : AppCompatActivity() {
             )
         }
 
-        val communityPicks = sortCommunityPicks(profiles)
-        setupHomeContent(communityPicks)
+        setupHomeContent(emptyList())
         showCommunityLoading(true)
-        loadCreatorSpotlight()
+        loadHomeData()
         setupQuickActions()
-        showListGh(communityPicks)
         BottomNavHelper.setup(this, binding.bottomNav.bottomNav, R.id.nav_home)
     }
 
-    private val listGitHub: ArrayList<Package>
-        @SuppressLint("Recycle")
-        get() {
-            val dataId = resources.getStringArray(R.array.username)
-            val dataNama = resources.getStringArray(R.array.surename)
-            val dataFoto = resources.obtainTypedArray(R.array.avatar)
-            val dataLokasi = resources.getStringArray(R.array.location)
-            val dataRepository = resources.getIntArray(R.array.repository)
-            val dataCompany = resources.getStringArray(R.array.company)
-            val dataFollowers = resources.getIntArray(R.array.followers)
-            val dataFollowing = resources.getIntArray(R.array.following)
-            val dataDeskripsi = resources.getStringArray(R.array.description)
-
-            val listgh = ArrayList<Package>()
-
-            for (i in dataId.indices) {
-                val gh = Package(
-                    dataId[i],
-                    dataNama[i],
-                    dataFoto.getResourceId(i, -1),
-                    dataLokasi[i],
-                    dataRepository[i],
-                    dataCompany[i],
-                    dataFollowers[i],
-                    dataFollowing[i],
-                    dataDeskripsi[i]
-                )
-                listgh.add(gh)
-            }
-            return listgh
-        }
-
-    private fun setupHomeContent(items: List<Package>) {
-        val totalRepositories = items.sumOf { it.repository }
+    private fun setupHomeContent(items: List<DetailUserResponse>) {
+        val totalRepositories = items.sumOf { it.publicRepos }
         val totalFollowers = items.sumOf { it.followers }
 
         binding.tvHomeBadge.text = getString(R.string.home_spotlight_label_creator)
-        binding.tvHomeSpotlightName.text = SPOTLIGHT_USERNAME
+        binding.tvHomeSpotlightName.text = getString(R.string.home_spotlight_loading_name)
         binding.tvHomeSpotlightMeta.text = getString(R.string.home_spotlight_loading)
-        binding.tvHomeSpotlightSubtitle.text = getString(R.string.home_spotlight_fallback_subtitle)
+        binding.tvHomeSpotlightSubtitle.text = getString(R.string.home_spotlight_loading_subtitle)
         binding.ivHomeSpotlightAvatar.setImageResource(R.drawable.ic_icongithub)
         binding.tvHomeProfilesValue.text = items.size.toString()
         binding.tvHomeRepositoriesValue.text = String.format("%,d", totalRepositories)
         binding.tvHomeFollowersValue.text = String.format("%,d", totalFollowers)
+        binding.btnHomeSpotlight.isEnabled = false
 
         binding.btnHomeSpotlight.setOnClickListener {
-            AppNavigator.open(this, ResultActivity.createIntent(this, SPOTLIGHT_USERNAME))
+            if (spotlightUsername.isNotBlank()) {
+                AppNavigator.open(this, ResultActivity.createIntent(this, spotlightUsername))
+            }
         }
     }
 
-    private fun loadCreatorSpotlight() {
+    private fun loadHomeData() {
         lifecycleScope.launch {
-            when (val result = githubRepository.getUserDetail(SPOTLIGHT_USERNAME)) {
-                is NetworkResult.Success -> bindCreatorSpotlight(result.data)
-                is NetworkResult.Error -> showCreatorFallback()
+            val githubRepository = GithubRepository(
+                ApiConfig.getApiService(githubAuthRepository.getSession()?.accessToken)
+            )
+            when (
+                val searchResult = githubRepository.searchUsers(
+                    query = HOME_DISCOVERY_QUERY,
+                    page = 1,
+                    perPage = HOME_COMMUNITY_LIMIT,
+                    sort = "followers",
+                    order = "desc"
+                )
+            ) {
+                is NetworkResult.Success -> {
+                    val detailedUsers = searchResult.data.items.map { user ->
+                        async { githubRepository.getUserDetail(user.login) }
+                    }.mapNotNull { deferred ->
+                        when (val detailResult = deferred.await()) {
+                            is NetworkResult.Success -> detailResult.data
+                            is NetworkResult.Error -> null
+                        }
+                    }
+
+                    val communityPicks = sortCommunityPicks(detailedUsers)
+                    setupHomeContent(communityPicks)
+                    if (communityPicks.isNotEmpty()) {
+                        bindCreatorSpotlight(communityPicks.first())
+                    } else {
+                        showCreatorFallback()
+                    }
+                    showListGh(communityPicks)
+                }
+                is NetworkResult.Error -> {
+                    showCreatorFallback()
+                    showListGh(emptyList())
+                }
             }
         }
     }
 
     private fun bindCreatorSpotlight(user: DetailUserResponse) {
+        spotlightUsername = user.login
+        binding.btnHomeSpotlight.isEnabled = true
         Glide.with(this)
             .load(user.avatarUrl)
             .centerCrop()
@@ -145,16 +149,18 @@ class MainActivity : AppCompatActivity() {
 
     private fun showCreatorFallback() {
         binding.ivHomeSpotlightAvatar.setImageResource(R.drawable.ic_icongithub)
-        binding.tvHomeSpotlightName.text = SPOTLIGHT_USERNAME
+        binding.tvHomeSpotlightName.text = getString(R.string.home_spotlight_fallback_name)
         binding.tvHomeSpotlightMeta.text = getString(R.string.home_spotlight_fallback_meta)
         binding.tvHomeSpotlightSubtitle.text = getString(R.string.home_spotlight_fallback_subtitle)
+        spotlightUsername = ""
+        binding.btnHomeSpotlight.isEnabled = false
     }
 
-    private fun sortCommunityPicks(items: List<Package>): List<Package> {
+    private fun sortCommunityPicks(items: List<DetailUserResponse>): List<DetailUserResponse> {
         return items.sortedWith(
-            compareByDescending<Package> { it.followers }
-                .thenByDescending { it.repository }
-                .thenBy { it.username.lowercase() }
+            compareByDescending<DetailUserResponse> { it.followers }
+                .thenByDescending { it.publicRepos }
+                .thenBy { it.login.lowercase() }
         )
     }
 
@@ -167,16 +173,14 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun showSelectedItem(gh: Package) {
-        AppNavigator.open(this, ResultActivity.createIntent(this, gh.username))
+    private fun showSelectedItem(user: DetailUserResponse) {
+        AppNavigator.open(this, ResultActivity.createIntent(this, user.login))
     }
 
-    private fun showListGh(items: List<Package>) {
+    private fun showListGh(items: List<DetailUserResponse>) {
         showCommunityLoading(false)
-        binding.tvHomeEmpty.visibility =
-            if (items.isEmpty()) android.view.View.VISIBLE else android.view.View.GONE
-        binding.recyclerView.visibility =
-            if (items.isEmpty()) android.view.View.GONE else android.view.View.VISIBLE
+        binding.tvHomeEmpty.visibility = if (items.isEmpty()) View.VISIBLE else View.GONE
+        binding.recyclerView.visibility = if (items.isEmpty()) View.GONE else View.VISIBLE
 
         binding.recyclerView.apply {
             layoutManager = if (
@@ -189,20 +193,21 @@ class MainActivity : AppCompatActivity() {
             }
             isNestedScrollingEnabled = false
             setHasFixedSize(true)
-            adapter = PackageAdapter(items, ::showSelectedItem)
+            adapter = HomeCommunityAdapter(items, ::showSelectedItem)
         }
     }
 
     private fun showCommunityLoading(isLoading: Boolean) {
         binding.lottieHomeLoading.visibility =
-            if (isLoading) android.view.View.VISIBLE else android.view.View.GONE
+            if (isLoading) View.VISIBLE else View.GONE
         if (isLoading) {
-            binding.recyclerView.visibility = android.view.View.GONE
-            binding.tvHomeEmpty.visibility = android.view.View.GONE
+            binding.recyclerView.visibility = View.GONE
+            binding.tvHomeEmpty.visibility = View.GONE
         }
     }
 
     companion object {
-        private const val SPOTLIGHT_USERNAME = "asadara"
+        private const val HOME_DISCOVERY_QUERY = "type:user followers:>1000 repos:>10"
+        private const val HOME_COMMUNITY_LIMIT = 8
     }
 }

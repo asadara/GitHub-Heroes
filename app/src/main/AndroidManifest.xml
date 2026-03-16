@@ -13,8 +13,29 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.GitHubUserRview">
         <activity
+            android:name=".ui.profile.RepositoryDetailActivity"
+            android:exported="false"
+            android:parentActivityName=".ui.profile.ProfileActivity" />
+        <activity
             android:name=".ui.settings.SettingsActivity"
             android:exported="false" />
+        <activity
+            android:name=".auth.GithubAuthCallbackActivity"
+            android:exported="true"
+            android:launchMode="singleTask"
+            android:theme="@style/Theme.GitHubUserRview">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <data
+                    android:scheme="${githubRedirectScheme}"
+                    android:host="${githubRedirectHost}"
+                    android:path="${githubRedirectPath}" />
+            </intent-filter>
+        </activity>
         <activity
             android:name=".ui.profile.ProfileActivity"
             android:exported="false" />

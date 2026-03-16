@@ -8,7 +8,7 @@ import retrofit2.converter.gson.GsonConverterFactory
 
 class ApiConfig {
     companion object {
-        fun getApiService(): ApiService {
+        fun getApiService(accessToken: String? = null): ApiService {
 
             //untuk mengetahui hasil respon (pd Logcat) saat melakukan request via retrofit:
             val loggingInterceptor = if (BuildConfig.DEBUG) {
@@ -20,11 +20,15 @@ class ApiConfig {
 
             val client = OkHttpClient.Builder()
                 .addInterceptor { chain ->
-                    val request = chain.request().newBuilder()
+                    val requestBuilder = chain.request().newBuilder()
                         .header("Accept", "application/vnd.github+json")
                         .header("User-Agent", "GitHubUserRview")
-                        .build()
-                    chain.proceed(request)
+
+                    if (!accessToken.isNullOrBlank()) {
+                        requestBuilder.header("Authorization", "Bearer $accessToken")
+                    }
+
+                    chain.proceed(requestBuilder.build())
                 }
                 .addInterceptor(loggingInterceptor)
                 .build()

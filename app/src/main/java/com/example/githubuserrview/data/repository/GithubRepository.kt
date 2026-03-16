@@ -15,9 +15,15 @@ class GithubRepository(
     private val apiService: ApiService = ApiConfig.getApiService()
 ) {
 
-    suspend fun searchUsers(query: String, page: Int, perPage: Int): NetworkResult<SearchUsersPage> {
+    suspend fun searchUsers(
+        query: String,
+        page: Int,
+        perPage: Int,
+        sort: String? = null,
+        order: String? = null
+    ): NetworkResult<SearchUsersPage> {
         return runRequest(
-            call = apiService.getSearchUsers(query, page, perPage),
+            call = apiService.getSearchUsers(query, page, perPage, sort, order),
             successBody = { response ->
                 response.body()?.let {
                     SearchUsersPage(
