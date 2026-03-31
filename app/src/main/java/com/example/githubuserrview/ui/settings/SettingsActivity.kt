@@ -176,12 +176,32 @@ class SettingsActivity : AppCompatActivity() {
                 binding.btnGithubDisconnect.isEnabled = false
             }
             session != null -> {
-                binding.tvGithubSyncStatus.text = getString(R.string.settings_sync_status_connected)
-                binding.tvGithubSyncMeta.text = getString(
-                    R.string.settings_sync_connected_meta,
-                    buildSessionSummary(session),
-                    session.scope.ifBlank { "read:user" }
+                val grantedScope = GithubAuthConfig.normalizeScopeString(session.scope)
+                    .ifBlank { "read:user" }
+                val missingScopes = GithubAuthConfig.missingSocialScopes(session.scope)
+                val isSocialScopeReady = missingScopes.isEmpty()
+
+                binding.tvGithubSyncStatus.text = getString(
+                    if (isSocialScopeReady) {
+                        R.string.settings_sync_status_connected
+                    } else {
+                        R.string.settings_sync_status_reauth_required
+                    }
                 )
+                binding.tvGithubSyncMeta.text = if (isSocialScopeReady) {
+                    getString(
+                        R.string.settings_sync_connected_meta,
+                        buildSessionSummary(session),
+                        grantedScope
+                    )
+                } else {
+                    getString(
+                        R.string.settings_sync_upgrade_meta,
+                        buildSessionSummary(session),
+                        grantedScope,
+                        missingScopes.joinToString(" ")
+                    )
+                }
                 binding.btnGithubConnect.text = getString(R.string.settings_sync_reconnect)
                 binding.btnGithubConnect.isEnabled = true
                 binding.btnGithubRefresh.isEnabled = true

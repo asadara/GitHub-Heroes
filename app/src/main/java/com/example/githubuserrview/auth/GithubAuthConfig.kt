@@ -9,6 +9,14 @@ import java.security.SecureRandom
 object GithubAuthConfig {
 
     private val secureRandom = SecureRandom()
+    private val scopeDelimiter = Regex("[,\\s]+")
+    private val socialScopes = listOf(
+        "read:user",
+        "user:email",
+        "user:follow",
+        "notifications",
+        "public_repo"
+    )
 
     val clientId: String
         get() = BuildConfig.GITHUB_CLIENT_ID
@@ -27,8 +35,24 @@ object GithubAuthConfig {
     val scopes: String
         get() = BuildConfig.GITHUB_AUTH_SCOPES
 
+    val requiredSocialScopes: List<String>
+        get() = socialScopes
+
     val isConfigured: Boolean
         get() = clientId.isNotBlank() && clientSecret.isNotBlank()
+
+    fun normalizeScopeString(rawScope: String?): String {
+        return parseScopeSet(rawScope).joinToString(" ")
+    }
+
+    fun missingSocialScopes(rawScope: String?): List<String> {
+        val grantedScopes = parseScopeSet(rawScope).toSet()
+        return socialScopes.filterNot(grantedScopes::contains)
+    }
+
+    fun hasSocialScopeAccess(rawScope: String?): Boolean {
+        return missingSocialScopes(rawScope).isEmpty()
+    }
 
     fun createState(): String = randomUrlSafeValue(24)
 
@@ -62,5 +86,14 @@ object GithubAuthConfig {
             bytes,
             Base64.URL_SAFE or Base64.NO_WRAP or Base64.NO_PADDING
         )
+    }
+
+    private fun parseScopeSet(rawScope: String?): List<String> {
+        return rawScope
+            .orEmpty()
+            .split(scopeDelimiter)
+            .map(String::trim)
+            .filter(String::isNotEmpty)
+            .distinct()
     }
 }

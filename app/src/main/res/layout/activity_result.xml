@@ -197,6 +197,27 @@
                             app:strokeColor="?attr/colorSecondaryVariant" />
                     </LinearLayout>
 
+                    <TextView
+                        android:id="@+id/tv_social_user_status"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="14dp"
+                        android:textColor="?attr/appTextSecondary"
+                        android:textSize="13sp"
+                        tools:text="Checking follow status..." />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btn_follow_user"
+                        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="10dp"
+                        android:text="@string/detail_follow_action_follow"
+                        app:cornerRadius="18dp"
+                        app:icon="@drawable/ic_person"
+                        app:iconTint="?attr/colorPrimary"
+                        app:strokeColor="?attr/colorSecondaryVariant" />
+
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"

@@ -22,9 +22,11 @@ import com.google.gson.Gson
 import com.google.gson.annotations.SerializedName
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.FormBody
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
 
 class GithubAuthRepository(
     context: Context,
@@ -34,6 +36,7 @@ class GithubAuthRepository(
 
     private val gson = Gson()
     private val cacheDao = UserDatabase.getDatabase(context).githubCacheDao()
+    private val jsonMediaType = "application/json; charset=utf-8".toMediaType()
 
     data class CachedProfileSnapshot(
         val profile: DetailUserResponse,
@@ -48,6 +51,16 @@ class GithubAuthRepository(
     data class CachedRepositorySnapshot(
         val repository: GithubRepo,
         val syncedAtEpochMs: Long
+    )
+
+    data class GithubUserSocialState(
+        val isSelf: Boolean,
+        val isFollowing: Boolean
+    )
+
+    data class GithubRepositorySocialState(
+        val isStarred: Boolean,
+        val isWatching: Boolean
     )
 
     fun getSession(): GithubAuthSession? = authStore.getSession()
@@ -360,6 +373,296 @@ class GithubAuthRepository(
         }
     }
 
+    suspend fun getUserSocialState(username: String): NetworkResult<GithubUserSocialState> =
+        withContext(Dispatchers.IO) {
+            val currentSession = authStore.getSession()
+                ?: return@withContext NetworkResult.Error("Belum ada akun GitHub yang tersinkron.")
+            val normalizedUsername = username.trim()
+            if (normalizedUsername.isBlank()) {
+                return@withContext NetworkResult.Error("Username GitHub tidak valid.")
+            }
+
+            if (normalizedUsername.equals(currentSession.login, ignoreCase = true)) {
+                return@withContext NetworkResult.Success(
+                    GithubUserSocialState(
+                        isSelf = true,
+                        isFollowing = false
+                    )
+                )
+            }
+
+            val request = newAuthorizedRequestBuilder(
+                currentSession.accessToken,
+                "$GITHUB_API_BASE/user/following/$normalizedUsername"
+            ).get().build()
+
+            try {
+                httpClient.newCall(request).execute().use { response ->
+                    when (response.code) {
+                        204 -> NetworkResult.Success(
+                            GithubUserSocialState(
+                                isSelf = false,
+                                isFollowing = true
+                            )
+                        )
+                        404 -> NetworkResult.Success(
+                            GithubUserSocialState(
+                                isSelf = false,
+                                isFollowing = false
+                            )
+                        )
+                        401 -> {
+                            authStore.clearSession()
+                            NetworkResult.Error("Sesi GitHub berakhir. Silakan login ulang.")
+                        }
+                        else -> NetworkResult.Error(
+                            "Gagal memeriksa status follow GitHub. (${response.code})"
+                        )
+                    }
+                }
+            } catch (error: Exception) {
+                NetworkResult.Error(error.localizedMessage ?: "Gagal memeriksa status follow GitHub.")
+            }
+        }
+
+    suspend fun setUserFollowing(username: String, shouldFollow: Boolean): NetworkResult<Unit> =
+        withContext(Dispatchers.IO) {
+            val currentSession = authStore.getSession()
+                ?: return@withContext NetworkResult.Error("Belum ada akun GitHub yang tersinkron.")
+            val normalizedUsername = username.trim()
+            if (normalizedUsername.isBlank()) {
+                return@withContext NetworkResult.Error("Username GitHub tidak valid.")
+            }
+
+            if (normalizedUsername.equals(currentSession.login, ignoreCase = true)) {
+                return@withContext NetworkResult.Error("Akun sendiri tidak perlu di-follow.")
+            }
+
+            val requestBuilder = newAuthorizedRequestBuilder(
+                currentSession.accessToken,
+                "$GITHUB_API_BASE/user/following/$normalizedUsername"
+            )
+            val request = if (shouldFollow) {
+                requestBuilder.put(EMPTY_REQUEST_BODY)
+            } else {
+                requestBuilder.delete()
+            }.build()
+
+            executeUnitRequest(
+                request = request,
+                successCodes = setOf(204),
+                defaultError = if (shouldFollow) {
+                    "Gagal mengikuti user GitHub."
+                } else {
+                    "Gagal membatalkan follow user GitHub."
+                }
+            )
+        }
+
+    suspend fun getRepositorySocialState(
+        owner: String,
+        repositoryName: String
+    ): NetworkResult<GithubRepositorySocialState> = withContext(Dispatchers.IO) {
+        val currentSession = authStore.getSession()
+            ?: return@withContext NetworkResult.Error("Belum ada akun GitHub yang tersinkron.")
+        val normalizedOwner = owner.trim()
+        val normalizedRepo = repositoryName.trim()
+        if (normalizedOwner.isBlank() || normalizedRepo.isBlank()) {
+            return@withContext NetworkResult.Error("Repository GitHub tidak valid.")
+        }
+
+        val starredRequest = newAuthorizedRequestBuilder(
+            currentSession.accessToken,
+            "$GITHUB_API_BASE/user/starred/$normalizedOwner/$normalizedRepo"
+        ).get().build()
+        val watchingRequest = newAuthorizedRequestBuilder(
+            currentSession.accessToken,
+            "$GITHUB_API_BASE/repos/$normalizedOwner/$normalizedRepo/subscription"
+        ).get().build()
+
+        try {
+            val isStarred = httpClient.newCall(starredRequest).execute().use { response ->
+                when (response.code) {
+                    204 -> true
+                    404 -> false
+                    401 -> {
+                        authStore.clearSession()
+                        return@withContext NetworkResult.Error("Sesi GitHub berakhir. Silakan login ulang.")
+                    }
+                    else -> return@withContext NetworkResult.Error(
+                        "Gagal memeriksa status star repository. (${response.code})"
+                    )
+                }
+            }
+
+            val isWatching = httpClient.newCall(watchingRequest).execute().use { response ->
+                when (response.code) {
+                    200 -> {
+                        val body = response.body?.string().orEmpty()
+                        val subscription = gson.fromJson(
+                            body,
+                            GithubRepositorySubscriptionResponse::class.java
+                        )
+                        subscription?.subscribed == true && subscription.ignored != true
+                    }
+                    404 -> false
+                    401 -> {
+                        authStore.clearSession()
+                        return@withContext NetworkResult.Error("Sesi GitHub berakhir. Silakan login ulang.")
+                    }
+                    else -> return@withContext NetworkResult.Error(
+                        "Gagal memeriksa status watch repository. (${response.code})"
+                    )
+                }
+            }
+
+            NetworkResult.Success(
+                GithubRepositorySocialState(
+                    isStarred = isStarred,
+                    isWatching = isWatching
+                )
+            )
+        } catch (error: Exception) {
+            NetworkResult.Error(error.localizedMessage ?: "Gagal memeriksa status sosial repository.")
+        }
+    }
+
+    suspend fun setRepositoryStarred(
+        owner: String,
+        repositoryName: String,
+        shouldStar: Boolean
+    ): NetworkResult<Unit> = withContext(Dispatchers.IO) {
+        val currentSession = authStore.getSession()
+            ?: return@withContext NetworkResult.Error("Belum ada akun GitHub yang tersinkron.")
+        val normalizedOwner = owner.trim()
+        val normalizedRepo = repositoryName.trim()
+        if (normalizedOwner.isBlank() || normalizedRepo.isBlank()) {
+            return@withContext NetworkResult.Error("Repository GitHub tidak valid.")
+        }
+
+        val requestBuilder = newAuthorizedRequestBuilder(
+            currentSession.accessToken,
+            "$GITHUB_API_BASE/user/starred/$normalizedOwner/$normalizedRepo"
+        )
+        val request = if (shouldStar) {
+            requestBuilder.put(EMPTY_REQUEST_BODY)
+        } else {
+            requestBuilder.delete()
+        }.build()
+
+        executeUnitRequest(
+            request = request,
+            successCodes = setOf(204),
+            defaultError = if (shouldStar) {
+                "Gagal menandai repository dengan star."
+            } else {
+                "Gagal menghapus star repository."
+            }
+        )
+    }
+
+    suspend fun setRepositoryWatching(
+        owner: String,
+        repositoryName: String,
+        shouldWatch: Boolean
+    ): NetworkResult<Unit> = withContext(Dispatchers.IO) {
+        val currentSession = authStore.getSession()
+            ?: return@withContext NetworkResult.Error("Belum ada akun GitHub yang tersinkron.")
+        val normalizedOwner = owner.trim()
+        val normalizedRepo = repositoryName.trim()
+        if (normalizedOwner.isBlank() || normalizedRepo.isBlank()) {
+            return@withContext NetworkResult.Error("Repository GitHub tidak valid.")
+        }
+
+        val requestBuilder = newAuthorizedRequestBuilder(
+            currentSession.accessToken,
+            "$GITHUB_API_BASE/repos/$normalizedOwner/$normalizedRepo/subscription"
+        )
+        val request = if (shouldWatch) {
+            val requestBody = gson.toJson(
+                mapOf(
+                    "subscribed" to true,
+                    "ignored" to false
+                )
+            ).toRequestBody(jsonMediaType)
+            requestBuilder.put(requestBody)
+        } else {
+            requestBuilder.delete()
+        }.build()
+
+        executeUnitRequest(
+            request = request,
+            successCodes = if (shouldWatch) setOf(200) else setOf(204),
+            defaultError = if (shouldWatch) {
+                "Gagal mengaktifkan watch repository."
+            } else {
+                "Gagal menonaktifkan watch repository."
+            }
+        )
+    }
+
+    suspend fun createIssueComment(
+        owner: String,
+        repositoryName: String,
+        issueNumber: Int,
+        body: String
+    ): NetworkResult<Unit> = withContext(Dispatchers.IO) {
+        val currentSession = authStore.getSession()
+            ?: return@withContext NetworkResult.Error("Belum ada akun GitHub yang tersinkron.")
+        val normalizedOwner = owner.trim()
+        val normalizedRepo = repositoryName.trim()
+        val normalizedBody = body.trim()
+        if (normalizedOwner.isBlank() || normalizedRepo.isBlank() || issueNumber <= 0) {
+            return@withContext NetworkResult.Error("Issue GitHub tidak valid.")
+        }
+        if (normalizedBody.isBlank()) {
+            return@withContext NetworkResult.Error("Isi comment tidak boleh kosong.")
+        }
+
+        val requestBody = gson.toJson(mapOf("body" to normalizedBody)).toRequestBody(jsonMediaType)
+        val request = newAuthorizedRequestBuilder(
+            currentSession.accessToken,
+            "$GITHUB_API_BASE/repos/$normalizedOwner/$normalizedRepo/issues/$issueNumber/comments"
+        ).post(requestBody).build()
+
+        executeUnitRequest(
+            request = request,
+            successCodes = setOf(201),
+            defaultError = "Gagal mengirim comment ke issue."
+        )
+    }
+
+    suspend fun addIssueReaction(
+        owner: String,
+        repositoryName: String,
+        issueNumber: Int,
+        content: String
+    ): NetworkResult<Unit> = withContext(Dispatchers.IO) {
+        val currentSession = authStore.getSession()
+            ?: return@withContext NetworkResult.Error("Belum ada akun GitHub yang tersinkron.")
+        val normalizedOwner = owner.trim()
+        val normalizedRepo = repositoryName.trim()
+        val normalizedContent = content.trim()
+        if (normalizedOwner.isBlank() || normalizedRepo.isBlank() || issueNumber <= 0) {
+            return@withContext NetworkResult.Error("Issue GitHub tidak valid.")
+        }
+        if (normalizedContent.isBlank()) {
+            return@withContext NetworkResult.Error("Reaction GitHub tidak valid.")
+        }
+
+        val requestBody = gson.toJson(mapOf("content" to normalizedContent)).toRequestBody(jsonMediaType)
+        val request = newAuthorizedRequestBuilder(
+            currentSession.accessToken,
+            "$GITHUB_API_BASE/repos/$normalizedOwner/$normalizedRepo/issues/$issueNumber/reactions"
+        ).post(requestBody).build()
+
+        executeUnitRequest(
+            request = request,
+            successCodes = setOf(200, 201),
+            defaultError = "Gagal mengirim reaction ke issue."
+        )
+    }
+
     suspend fun beginAuthorization(): NetworkResult<Uri> {
         if (!GithubAuthConfig.isConfigured) {
             return NetworkResult.Error("GitHub OAuth belum dikonfigurasi.")
@@ -519,6 +822,39 @@ class GithubAuthRepository(
         }
     }
 
+    private fun newAuthorizedRequestBuilder(accessToken: String, url: String): Request.Builder {
+        return Request.Builder()
+            .url(url)
+            .header("Accept", "application/vnd.github+json")
+            .header("Authorization", "Bearer $accessToken")
+            .header("User-Agent", "GitHubUserRview")
+            .header("X-GitHub-Api-Version", GITHUB_API_VERSION)
+    }
+
+    private fun executeUnitRequest(
+        request: Request,
+        successCodes: Set<Int>,
+        defaultError: String
+    ): NetworkResult<Unit> {
+        return try {
+            httpClient.newCall(request).execute().use { response ->
+                when {
+                    successCodes.contains(response.code) -> NetworkResult.Success(Unit)
+                    response.code == 401 -> {
+                        authStore.clearSession()
+                        NetworkResult.Error("Sesi GitHub berakhir. Silakan login ulang.")
+                    }
+                    response.code == 403 -> NetworkResult.Error(
+                        "$defaultError Scope GitHub Anda belum cukup atau resource dibatasi. (${response.code})"
+                    )
+                    else -> NetworkResult.Error("$defaultError (${response.code})")
+                }
+            }
+        } catch (error: Exception) {
+            NetworkResult.Error(error.localizedMessage ?: defaultError)
+        }
+    }
+
     private fun DetailUserResponse.toSession(tokenResponse: GithubAccessTokenResponse): GithubAuthSession {
         return toSession(
             token = tokenResponse.accessToken.orEmpty(),
@@ -657,3 +993,14 @@ private data class GithubAccessTokenResponse(
     @SerializedName("error_description")
     val errorDescription: String?
 )
+
+private data class GithubRepositorySubscriptionResponse(
+    @SerializedName("subscribed")
+    val subscribed: Boolean?,
+    @SerializedName("ignored")
+    val ignored: Boolean?
+)
+
+private const val GITHUB_API_BASE = "https://api.github.com"
+private const val GITHUB_API_VERSION = "2022-11-28"
+private val EMPTY_REQUEST_BODY = ByteArray(0).toRequestBody(null)

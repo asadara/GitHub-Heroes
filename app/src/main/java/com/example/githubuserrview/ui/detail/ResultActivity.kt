@@ -46,14 +46,17 @@ class ResultActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityResultBinding
     private lateinit var viewModel: DetailViewModel
+    private val githubAuthRepository by lazy { GithubAuthRepository(this) }
     private val githubRepository by lazy {
         GithubRepository(
-            ApiConfig.getApiService(GithubAuthRepository(this).getSession()?.accessToken)
+            ApiConfig.getApiService(githubAuthRepository.getSession()?.accessToken)
         )
     }
     private val publicRepoAdapter by lazy { ProfileRepoAdapter(::openRepository) }
     private var currentUser: DetailUserResponse? = null
+    private var currentUserSocialState: GithubAuthRepository.GithubUserSocialState? = null
     private var isFavorite = false
+    private var isFollowActionRunning = false
     private var requestedUsername: String = ""
 
     @SuppressLint("SourceLockedOrientationActivity")
@@ -82,9 +85,13 @@ class ResultActivity : AppCompatActivity() {
         binding.btnPublicProfileRefresh.setOnClickListener {
             refreshPublicProfile()
         }
+        binding.btnFollowUser.setOnClickListener {
+            toggleUserFollow()
+        }
         bindPublicRepositories(emptyList())
         renderPublicProfileState(isError = false, timestamp = null)
         renderPublicRepositoriesState(isError = false, timestamp = null)
+        renderUserSocialState()
 
         viewModel.getDetailUser().observe(this) { user ->
             if (user != null) {
@@ -189,6 +196,7 @@ class ResultActivity : AppCompatActivity() {
 
         updateFavoriteState(user.id)
         setupActions(user, blogUrl)
+        loadUserSocialState(user.login)
         loadPublicRepositories(user.login)
     }
 
@@ -353,7 +361,121 @@ class ResultActivity : AppCompatActivity() {
         setRefreshingState(true)
         renderPublicProfileState(isError = false, timestamp = null)
         renderPublicRepositoriesState(isError = false, timestamp = null)
+        renderUserSocialState(isLoading = true)
         viewModel.loadUserDetail(requestedUsername)
+    }
+
+    private fun loadUserSocialState(username: String) {
+        if (githubAuthRepository.getSession() == null) {
+            currentUserSocialState = null
+            renderUserSocialState()
+            return
+        }
+
+        currentUserSocialState = null
+        renderUserSocialState(isLoading = true)
+        CoroutineScope(Dispatchers.Main).launch {
+            when (val result = githubAuthRepository.getUserSocialState(username)) {
+                is NetworkResult.Success -> {
+                    currentUserSocialState = result.data
+                    renderUserSocialState()
+                }
+                is NetworkResult.Error -> {
+                    currentUserSocialState = null
+                    renderUserSocialState(errorMessage = result.message)
+                }
+            }
+        }
+    }
+
+    private fun toggleUserFollow() {
+        val user = currentUser ?: return
+        val socialState = currentUserSocialState ?: return
+        if (socialState.isSelf || isFollowActionRunning) {
+            return
+        }
+
+        val shouldFollow = !socialState.isFollowing
+        isFollowActionRunning = true
+        renderUserSocialState(isLoading = true)
+        CoroutineScope(Dispatchers.Main).launch {
+            when (val result = githubAuthRepository.setUserFollowing(user.login, shouldFollow)) {
+                is NetworkResult.Success -> {
+                    currentUserSocialState = socialState.copy(isFollowing = shouldFollow)
+                    renderUserSocialState()
+                    Toast.makeText(
+                        this@ResultActivity,
+                        getString(
+                            if (shouldFollow) {
+                                R.string.detail_follow_success_followed
+                            } else {
+                                R.string.detail_follow_success_unfollowed
+                            },
+                            user.login
+                        ),
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+                is NetworkResult.Error -> {
+                    renderUserSocialState(errorMessage = result.message)
+                }
+            }
+            isFollowActionRunning = false
+        }
+    }
+
+    private fun renderUserSocialState(
+        isLoading: Boolean = false,
+        errorMessage: String? = null
+    ) {
+        val session = githubAuthRepository.getSession()
+        val socialState = currentUserSocialState
+
+        when {
+            session == null -> {
+                binding.tvSocialUserStatus.text = getString(R.string.detail_follow_status_signed_out)
+                binding.btnFollowUser.text = getString(R.string.detail_follow_action_follow)
+                binding.btnFollowUser.isEnabled = false
+            }
+            isLoading -> {
+                binding.tvSocialUserStatus.text = getString(R.string.detail_follow_status_loading)
+                binding.btnFollowUser.text = getString(R.string.detail_follow_action_follow)
+                binding.btnFollowUser.isEnabled = false
+            }
+            !errorMessage.isNullOrBlank() -> {
+                binding.tvSocialUserStatus.text = errorMessage
+                binding.btnFollowUser.text = getString(
+                    if (socialState?.isFollowing == true) {
+                        R.string.detail_follow_action_following
+                    } else {
+                        R.string.detail_follow_action_follow
+                    }
+                )
+                binding.btnFollowUser.isEnabled = socialState != null && socialState.isSelf.not()
+            }
+            socialState?.isSelf == true -> {
+                binding.tvSocialUserStatus.text = getString(R.string.detail_follow_status_self)
+                binding.btnFollowUser.text = getString(R.string.detail_follow_action_self)
+                binding.btnFollowUser.isEnabled = false
+            }
+            socialState?.isFollowing == true -> {
+                binding.tvSocialUserStatus.text = getString(R.string.detail_follow_status_following)
+                binding.btnFollowUser.text = getString(R.string.detail_follow_action_following)
+                binding.btnFollowUser.isEnabled = true
+            }
+            socialState != null -> {
+                binding.tvSocialUserStatus.text = getString(R.string.detail_follow_status_not_following)
+                binding.btnFollowUser.text = getString(R.string.detail_follow_action_follow)
+                binding.btnFollowUser.isEnabled = true
+            }
+            else -> {
+                binding.tvSocialUserStatus.text = getString(R.string.detail_follow_status_loading)
+                binding.btnFollowUser.text = getString(R.string.detail_follow_action_follow)
+                binding.btnFollowUser.isEnabled = false
+            }
+        }
+
+        binding.btnFollowUser.alpha = if (binding.btnFollowUser.isEnabled) 1f else 0.65f
     }
 
     private fun renderPublicProfileState(isError: Boolean, timestamp: Long?) {

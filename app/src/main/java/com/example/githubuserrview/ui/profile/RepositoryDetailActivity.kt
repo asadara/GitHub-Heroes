@@ -9,6 +9,7 @@ import android.os.Bundle
 import android.util.Base64
 import android.view.View
 import android.view.ViewGroup
+import android.widget.EditText
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
@@ -30,6 +31,7 @@ import com.example.githubuserrview.ui.common.AppHeader
 import com.example.githubuserrview.ui.common.AppNavigator
 import com.example.githubuserrview.ui.common.SyncStatusFormatter
 import com.example.githubuserrview.ui.detail.ResultActivity
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.chip.Chip
 import com.google.android.material.chip.ChipGroup
 import io.noties.markwon.AbstractMarkwonPlugin
@@ -59,6 +61,11 @@ class RepositoryDetailActivity : AppCompatActivity() {
     private val githubAuthRepository by lazy { GithubAuthRepository(this) }
     private val previewImageClient by lazy { OkHttpClient() }
     private var currentRepository: GithubRepo? = null
+    private var currentRepositorySocialState: GithubAuthRepository.GithubRepositorySocialState? = null
+    private var currentIssues: List<GithubIssue> = emptyList()
+    private var selectedIssue: GithubIssue? = null
+    private var isRepositorySocialActionRunning = false
+    private var isIssueActionRunning = false
     private var previewLoadJob: Job? = null
     private var debugPreviewMode = DebugPreviewMode.LIVE_REPO
 
@@ -96,6 +103,21 @@ class RepositoryDetailActivity : AppCompatActivity() {
         binding.btnRepoRefresh.setOnClickListener {
             loadRepository(owner, repositoryName, fullName, showRefreshToast = true)
         }
+        binding.btnRepoStar.setOnClickListener {
+            toggleRepositoryStar()
+        }
+        binding.btnRepoWatch.setOnClickListener {
+            toggleRepositoryWatch()
+        }
+        binding.btnRepoSelectIssue.setOnClickListener {
+            openIssuePicker()
+        }
+        binding.btnRepoCommentIssue.setOnClickListener {
+            openIssueCommentDialog()
+        }
+        binding.btnRepoReactIssue.setOnClickListener {
+            openIssueReactionDialog()
+        }
         if (BuildConfig.DEBUG) {
             binding.btnRepoRefresh.setOnLongClickListener {
                 advanceDebugPreviewMode()
@@ -104,6 +126,8 @@ class RepositoryDetailActivity : AppCompatActivity() {
         }
 
         setRefreshEnabled(false)
+        renderRepositorySocialState()
+        renderIssueActionState()
         loadRepository(owner, repositoryName, fullName, showRefreshToast = false)
     }
 
@@ -125,6 +149,7 @@ class RepositoryDetailActivity : AppCompatActivity() {
             val cachedSnapshot = githubAuthRepository.getCachedRepositorySnapshot(fullName)
             cachedSnapshot?.let { snapshot ->
                 bindRepository(snapshot.repository)
+                loadRepositorySocialState(snapshot.repository)
                 renderRepositoryState(
                     source = SyncSource.CACHE,
                     lastSyncEpochMs = snapshot.syncedAtEpochMs
@@ -153,6 +178,7 @@ class RepositoryDetailActivity : AppCompatActivity() {
             when (val result = detailDeferred.await()) {
                 is NetworkResult.Success -> {
                     bindRepository(result.data)
+                    loadRepositorySocialState(result.data)
                     renderRepositoryState(
                         source = SyncSource.LIVE,
                         lastSyncEpochMs = System.currentTimeMillis()
@@ -267,6 +293,7 @@ class RepositoryDetailActivity : AppCompatActivity() {
         binding.btnRepoOpenHomepage.isEnabled = normalizedHomepageUrl != null
         binding.btnRepoOpenHomepage.alpha = if (normalizedHomepageUrl == null) 0.55f else 1f
         setRefreshEnabled(true)
+        renderRepositorySocialState()
     }
 
     private fun bindReadme(readme: GithubReadme?) {
@@ -366,6 +393,10 @@ class RepositoryDetailActivity : AppCompatActivity() {
     }
 
     private fun bindIssues(issues: List<GithubIssue>) {
+        currentIssues = issues
+        selectedIssue = issues.firstOrNull { issue ->
+            issue.number == selectedIssue?.number
+        } ?: issues.firstOrNull()
         binding.tvRepoIssues.text = if (issues.isEmpty()) {
             getString(R.string.repo_detail_issues_empty)
         } else {
@@ -385,6 +416,7 @@ class RepositoryDetailActivity : AppCompatActivity() {
                 )
             }.trim()
         }
+        renderIssueActionState()
     }
 
     private fun populateChipGroup(
@@ -438,6 +470,358 @@ class RepositoryDetailActivity : AppCompatActivity() {
         binding.btnRepoRefresh.isEnabled = isEnabled
         binding.btnRepoOpenGithub.isEnabled = isEnabled && currentRepository != null
         binding.btnRepoOpenOwnerProfile.isEnabled = isEnabled && currentRepository != null
+    }
+
+    private fun loadRepositorySocialState(repository: GithubRepo) {
+        if (githubAuthRepository.getSession() == null) {
+            currentRepositorySocialState = null
+            renderRepositorySocialState()
+            renderIssueActionState()
+            return
+        }
+
+        currentRepositorySocialState = null
+        renderRepositorySocialState(isLoading = true)
+        lifecycleScope.launch {
+            when (
+                val result = githubAuthRepository.getRepositorySocialState(
+                    owner = repository.owner.login,
+                    repositoryName = repository.name
+                )
+            ) {
+                is NetworkResult.Success -> {
+                    currentRepositorySocialState = result.data
+                    renderRepositorySocialState()
+                }
+                is NetworkResult.Error -> {
+                    currentRepositorySocialState = null
+                    renderRepositorySocialState(errorMessage = result.message)
+                }
+            }
+            renderIssueActionState()
+        }
+    }
+
+    private fun toggleRepositoryStar() {
+        val repository = currentRepository ?: return
+        val socialState = currentRepositorySocialState ?: return
+        if (isRepositorySocialActionRunning) {
+            return
+        }
+
+        val shouldStar = !socialState.isStarred
+        isRepositorySocialActionRunning = true
+        renderRepositorySocialState(isLoading = true)
+        lifecycleScope.launch {
+            when (
+                val result = githubAuthRepository.setRepositoryStarred(
+                    owner = repository.owner.login,
+                    repositoryName = repository.name,
+                    shouldStar = shouldStar
+                )
+            ) {
+                is NetworkResult.Success -> {
+                    currentRepositorySocialState = socialState.copy(isStarred = shouldStar)
+                    renderRepositorySocialState()
+                    showToast(
+                        getString(
+                            if (shouldStar) {
+                                R.string.repo_detail_star_success
+                            } else {
+                                R.string.repo_detail_unstar_success
+                            }
+                        )
+                    )
+                }
+                is NetworkResult.Error -> {
+                    renderRepositorySocialState(errorMessage = result.message)
+                }
+            }
+            isRepositorySocialActionRunning = false
+        }
+    }
+
+    private fun toggleRepositoryWatch() {
+        val repository = currentRepository ?: return
+        val socialState = currentRepositorySocialState ?: return
+        if (isRepositorySocialActionRunning) {
+            return
+        }
+
+        val shouldWatch = !socialState.isWatching
+        isRepositorySocialActionRunning = true
+        renderRepositorySocialState(isLoading = true)
+        lifecycleScope.launch {
+            when (
+                val result = githubAuthRepository.setRepositoryWatching(
+                    owner = repository.owner.login,
+                    repositoryName = repository.name,
+                    shouldWatch = shouldWatch
+                )
+            ) {
+                is NetworkResult.Success -> {
+                    currentRepositorySocialState = socialState.copy(isWatching = shouldWatch)
+                    renderRepositorySocialState()
+                    showToast(
+                        getString(
+                            if (shouldWatch) {
+                                R.string.repo_detail_watch_success
+                            } else {
+                                R.string.repo_detail_unwatch_success
+                            }
+                        )
+                    )
+                }
+                is NetworkResult.Error -> {
+                    renderRepositorySocialState(errorMessage = result.message)
+                }
+            }
+            isRepositorySocialActionRunning = false
+        }
+    }
+
+    private fun renderRepositorySocialState(
+        isLoading: Boolean = false,
+        errorMessage: String? = null
+    ) {
+        val session = githubAuthRepository.getSession()
+        val socialState = currentRepositorySocialState
+
+        when {
+            session == null -> {
+                binding.tvRepoSocialStatus.text = getString(R.string.repo_detail_social_status_signed_out)
+                binding.btnRepoStar.text = getString(R.string.repo_detail_star_action)
+                binding.btnRepoWatch.text = getString(R.string.repo_detail_watch_action)
+                binding.btnRepoStar.isEnabled = false
+                binding.btnRepoWatch.isEnabled = false
+            }
+            isLoading -> {
+                binding.tvRepoSocialStatus.text = getString(R.string.repo_detail_social_status_loading)
+                binding.btnRepoStar.text = getString(R.string.repo_detail_star_action)
+                binding.btnRepoWatch.text = getString(R.string.repo_detail_watch_action)
+                binding.btnRepoStar.isEnabled = false
+                binding.btnRepoWatch.isEnabled = false
+            }
+            !errorMessage.isNullOrBlank() -> {
+                binding.tvRepoSocialStatus.text = errorMessage
+                binding.btnRepoStar.text = getString(
+                    if (socialState?.isStarred == true) {
+                        R.string.repo_detail_starred_action
+                    } else {
+                        R.string.repo_detail_star_action
+                    }
+                )
+                binding.btnRepoWatch.text = getString(
+                    if (socialState?.isWatching == true) {
+                        R.string.repo_detail_watching_action
+                    } else {
+                        R.string.repo_detail_watch_action
+                    }
+                )
+                binding.btnRepoStar.isEnabled = socialState != null
+                binding.btnRepoWatch.isEnabled = socialState != null
+            }
+            socialState != null -> {
+                binding.tvRepoSocialStatus.text = getString(R.string.repo_detail_social_status_ready)
+                binding.btnRepoStar.text = getString(
+                    if (socialState.isStarred) {
+                        R.string.repo_detail_starred_action
+                    } else {
+                        R.string.repo_detail_star_action
+                    }
+                )
+                binding.btnRepoWatch.text = getString(
+                    if (socialState.isWatching) {
+                        R.string.repo_detail_watching_action
+                    } else {
+                        R.string.repo_detail_watch_action
+                    }
+                )
+                binding.btnRepoStar.isEnabled = true
+                binding.btnRepoWatch.isEnabled = true
+            }
+            else -> {
+                binding.tvRepoSocialStatus.text = getString(R.string.repo_detail_social_status_loading)
+                binding.btnRepoStar.text = getString(R.string.repo_detail_star_action)
+                binding.btnRepoWatch.text = getString(R.string.repo_detail_watch_action)
+                binding.btnRepoStar.isEnabled = false
+                binding.btnRepoWatch.isEnabled = false
+            }
+        }
+
+        binding.btnRepoStar.alpha = if (binding.btnRepoStar.isEnabled) 1f else 0.65f
+        binding.btnRepoWatch.alpha = if (binding.btnRepoWatch.isEnabled) 1f else 0.65f
+    }
+
+    private fun renderIssueActionState(statusMessage: String? = null) {
+        val hasSession = githubAuthRepository.getSession() != null
+        val hasIssues = currentIssues.isNotEmpty()
+        val hasSelection = selectedIssue != null
+        val canRunActions = hasSession && hasSelection && !isIssueActionRunning
+
+        binding.tvRepoIssueTarget.text = selectedIssue?.let { issue ->
+            getString(R.string.repo_detail_issue_target_selected, issue.number, issue.title)
+        } ?: getString(R.string.repo_detail_issue_target_empty)
+
+        binding.tvRepoIssueActionStatus.text = when {
+            !statusMessage.isNullOrBlank() -> statusMessage
+            !hasSession -> getString(R.string.repo_detail_social_status_signed_out)
+            else -> getString(R.string.repo_detail_issue_action_status_idle)
+        }
+
+        binding.btnRepoSelectIssue.isEnabled = hasIssues && !isIssueActionRunning
+        binding.btnRepoCommentIssue.isEnabled = canRunActions
+        binding.btnRepoReactIssue.isEnabled = canRunActions
+        binding.btnRepoSelectIssue.alpha = if (binding.btnRepoSelectIssue.isEnabled) 1f else 0.65f
+        binding.btnRepoCommentIssue.alpha = if (binding.btnRepoCommentIssue.isEnabled) 1f else 0.65f
+        binding.btnRepoReactIssue.alpha = if (binding.btnRepoReactIssue.isEnabled) 1f else 0.65f
+    }
+
+    private fun openIssuePicker() {
+        if (currentIssues.isEmpty()) {
+            showToast(getString(R.string.repo_detail_issues_empty))
+            return
+        }
+
+        val issueItems = currentIssues.map { issue ->
+            "#${issue.number} ${issue.title}"
+        }.toTypedArray()
+
+        MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.repo_detail_issue_picker_title)
+            .setItems(issueItems) { _, which ->
+                selectedIssue = currentIssues.getOrNull(which)
+                renderIssueActionState()
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
+    }
+
+    private fun openIssueCommentDialog() {
+        val repository = currentRepository ?: return
+        val issue = selectedIssue
+        if (issue == null) {
+            showToast(getString(R.string.repo_detail_issue_target_empty))
+            return
+        }
+
+        val input = EditText(this).apply {
+            hint = getString(R.string.repo_detail_issue_comment_hint)
+            minLines = 4
+            maxLines = 6
+            setText("")
+        }
+
+        val dialog = MaterialAlertDialogBuilder(this)
+            .setTitle(getString(R.string.repo_detail_issue_comment_dialog_title) + " #${issue.number}")
+            .setView(input)
+            .setPositiveButton(R.string.repo_detail_issue_comment_submit, null)
+            .setNegativeButton(android.R.string.cancel, null)
+            .create()
+
+        dialog.setOnShowListener {
+            dialog.getButton(androidx.appcompat.app.AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+                val commentBody = input.text?.toString().orEmpty().trim()
+                if (commentBody.isBlank()) {
+                    input.error = getString(R.string.empty)
+                    return@setOnClickListener
+                }
+
+                dialog.dismiss()
+                isIssueActionRunning = true
+                renderIssueActionState(statusMessage = getString(R.string.repo_detail_issue_comment_dialog_title))
+                lifecycleScope.launch {
+                    when (
+                        val result = githubAuthRepository.createIssueComment(
+                            owner = repository.owner.login,
+                            repositoryName = repository.name,
+                            issueNumber = issue.number,
+                            body = commentBody
+                        )
+                    ) {
+                        is NetworkResult.Success -> {
+                            renderIssueActionState(
+                                statusMessage = getString(
+                                    R.string.repo_detail_issue_comment_success,
+                                    issue.number
+                                )
+                            )
+                            showToast(
+                                getString(
+                                    R.string.repo_detail_issue_comment_success,
+                                    issue.number
+                                )
+                            )
+                            loadRepository(
+                                owner = repository.owner.login,
+                                repositoryName = repository.name,
+                                fullName = repository.fullName,
+                                showRefreshToast = false
+                            )
+                        }
+                        is NetworkResult.Error -> {
+                            renderIssueActionState(statusMessage = result.message)
+                            showToast(result.message)
+                        }
+                    }
+                    isIssueActionRunning = false
+                    renderIssueActionState()
+                }
+            }
+        }
+        dialog.show()
+    }
+
+    private fun openIssueReactionDialog() {
+        val repository = currentRepository ?: return
+        val issue = selectedIssue
+        if (issue == null) {
+            showToast(getString(R.string.repo_detail_issue_target_empty))
+            return
+        }
+
+        val reactionOptions = listOf(
+            ReactionOption("+1", getString(R.string.repo_detail_reaction_plus_one)),
+            ReactionOption("heart", getString(R.string.repo_detail_reaction_heart)),
+            ReactionOption("hooray", getString(R.string.repo_detail_reaction_hooray)),
+            ReactionOption("rocket", getString(R.string.repo_detail_reaction_rocket))
+        )
+
+        MaterialAlertDialogBuilder(this)
+            .setTitle(getString(R.string.repo_detail_issue_reaction_dialog_title) + " #${issue.number}")
+            .setItems(reactionOptions.map(ReactionOption::label).toTypedArray()) { _, which ->
+                val reaction = reactionOptions.getOrNull(which) ?: return@setItems
+                isIssueActionRunning = true
+                renderIssueActionState(statusMessage = reaction.label)
+                lifecycleScope.launch {
+                    when (
+                        val result = githubAuthRepository.addIssueReaction(
+                            owner = repository.owner.login,
+                            repositoryName = repository.name,
+                            issueNumber = issue.number,
+                            content = reaction.content
+                        )
+                    ) {
+                        is NetworkResult.Success -> {
+                            val successMessage = getString(
+                                R.string.repo_detail_issue_reaction_success,
+                                reaction.label,
+                                issue.number
+                            )
+                            renderIssueActionState(statusMessage = successMessage)
+                            showToast(successMessage)
+                        }
+                        is NetworkResult.Error -> {
+                            renderIssueActionState(statusMessage = result.message)
+                            showToast(result.message)
+                        }
+                    }
+                    isIssueActionRunning = false
+                    renderIssueActionState()
+                }
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
     }
 
     private fun formatUpdatedAt(rawDate: String?): String {
@@ -733,4 +1117,9 @@ class RepositoryDetailActivity : AppCompatActivity() {
         CACHE,
         CACHE_ERROR
     }
+
+    private data class ReactionOption(
+        val content: String,
+        val label: String
+    )
 }

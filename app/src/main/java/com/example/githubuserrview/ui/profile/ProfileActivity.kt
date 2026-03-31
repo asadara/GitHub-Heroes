@@ -13,6 +13,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.bumptech.glide.Glide
 import com.example.githubuserrview.R
+import com.example.githubuserrview.auth.GithubAuthConfig
 import com.example.githubuserrview.auth.GithubAuthRepository
 import com.example.githubuserrview.data.model.GithubEmail
 import com.example.githubuserrview.data.model.GithubOrganization
@@ -228,12 +229,32 @@ class ProfileActivity : AppCompatActivity() {
             return
         }
 
-        binding.tvProfileSyncStatus.text = getString(R.string.profile_sync_status_connected)
-        binding.tvProfileSyncMeta.text = getString(
-            R.string.profile_sync_meta_connected,
-            session.name ?: session.login,
-            session.scope.ifBlank { "read:user" }
+        val grantedScope = GithubAuthConfig.normalizeScopeString(session.scope)
+            .ifBlank { "read:user" }
+        val missingScopes = GithubAuthConfig.missingSocialScopes(session.scope)
+        val isSocialScopeReady = missingScopes.isEmpty()
+
+        binding.tvProfileSyncStatus.text = getString(
+            if (isSocialScopeReady) {
+                R.string.profile_sync_status_connected
+            } else {
+                R.string.profile_sync_status_limited
+            }
         )
+        binding.tvProfileSyncMeta.text = if (isSocialScopeReady) {
+            getString(
+                R.string.profile_sync_meta_connected,
+                session.name ?: session.login,
+                grantedScope
+            )
+        } else {
+            getString(
+                R.string.profile_sync_meta_limited,
+                session.name ?: session.login,
+                grantedScope,
+                missingScopes.joinToString(" ")
+            )
+        }
         currentProfileSyncSource?.let { source ->
             renderProfileSyncState(source, latestProfileSyncEpochMs)
         } ?: run {

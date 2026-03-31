@@ -27,6 +27,17 @@ Status: completed
 - Fixed deprecated parcelable access in the legacy detail activity.
 - Built and installed the latest debug APK to the connected tablet.
 
+## Social Actions Phase 2
+
+Status: in progress
+
+- Upgraded GitHub OAuth scope handling for public social actions only.
+- Added scope readiness indicators in Settings and Profile when re-auth is required.
+- Added follow or unfollow support on the live user profile screen.
+- Added star and watch toggles on the repository detail screen.
+- Added issue target selection plus public issue comment and issue reaction actions on the repository detail screen.
+- Verified the connected tablet session carries social scopes: `notifications`, `public_repo`, `read:user`, `user:email`, and `user:follow`.
+
 ## Repository Assets
 
 Status: completed

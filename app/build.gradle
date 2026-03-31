@@ -49,7 +49,10 @@ android {
         def githubRedirectScheme = resolveConfigValue('GITHUB_REDIRECT_SCHEME', 'githubuserrview')
         def githubRedirectHost = resolveConfigValue('GITHUB_REDIRECT_HOST', 'auth')
         def githubRedirectPath = resolveConfigValue('GITHUB_REDIRECT_PATH', '/callback')
-        def githubAuthScopes = resolveConfigValue('GITHUB_AUTH_SCOPES', 'read:user user:email')
+        def githubAuthScopes = resolveConfigValue(
+                'GITHUB_AUTH_SCOPES',
+                'read:user user:email user:follow notifications public_repo'
+        )
 
         buildConfigField 'String', 'GITHUB_CLIENT_ID', asBuildConfigString(githubClientId)
         buildConfigField 'String', 'GITHUB_CLIENT_SECRET', asBuildConfigString(githubClientSecret)

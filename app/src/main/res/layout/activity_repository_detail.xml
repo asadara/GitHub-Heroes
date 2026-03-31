@@ -162,6 +162,50 @@
                         tools:text="Updated 10 Mar 2026, 10:15" />
 
                     <TextView
+                        android:id="@+id/tv_repo_social_status"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="14dp"
+                        android:textColor="?attr/appTextSecondary"
+                        android:textSize="13sp"
+                        tools:text="Checking repository social state..." />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="10dp"
+                        android:orientation="horizontal">
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btn_repo_star"
+                            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="@string/repo_detail_star_action"
+                            app:cornerRadius="18dp"
+                            app:icon="@drawable/ic_star"
+                            app:iconTint="?attr/colorPrimary"
+                            app:strokeColor="?attr/colorSecondaryVariant" />
+
+                        <Space
+                            android:layout_width="10dp"
+                            android:layout_height="1dp" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btn_repo_watch"
+                            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="@string/repo_detail_watch_action"
+                            app:cornerRadius="18dp"
+                            app:icon="@drawable/ic_baseline_home"
+                            app:iconTint="?attr/colorPrimary"
+                            app:strokeColor="?attr/colorSecondaryVariant" />
+                    </LinearLayout>
+
+                    <TextView
                         android:id="@+id/tv_repo_preview_title"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -262,6 +306,72 @@
                         android:textColor="?attr/appTextSecondary"
                         android:textSize="14sp"
                         tools:text="Open issue snapshot appears here." />
+
+                    <TextView
+                        android:id="@+id/tv_repo_issue_target"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp"
+                        android:textColor="?attr/colorPrimary"
+                        android:textSize="13sp"
+                        android:textStyle="bold"
+                        tools:text="Selected issue: #42 Improve tablet layout" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btn_repo_select_issue"
+                        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="10dp"
+                        android:text="@string/repo_detail_issue_select_action"
+                        app:cornerRadius="18dp"
+                        app:icon="@drawable/ic_repo"
+                        app:iconTint="?attr/colorPrimary"
+                        app:strokeColor="?attr/colorSecondaryVariant" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="10dp"
+                        android:orientation="horizontal">
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btn_repo_comment_issue"
+                            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="@string/repo_detail_issue_comment_action"
+                            app:cornerRadius="18dp"
+                            app:icon="@drawable/ic_baseline_contact_mail_24"
+                            app:iconTint="?attr/colorPrimary"
+                            app:strokeColor="?attr/colorSecondaryVariant" />
+
+                        <Space
+                            android:layout_width="10dp"
+                            android:layout_height="1dp" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btn_repo_react_issue"
+                            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="@string/repo_detail_issue_reaction_action"
+                            app:cornerRadius="18dp"
+                            app:icon="@drawable/ic_baseline_thumb_up"
+                            app:iconTint="?attr/colorPrimary"
+                            app:strokeColor="?attr/colorSecondaryVariant" />
+                    </LinearLayout>
+
+                    <TextView
+                        android:id="@+id/tv_repo_issue_action_status"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="10dp"
+                        android:textColor="?attr/appTextSecondary"
+                        android:textSize="13sp"
+                        tools:text="Actions apply to sampled open issues only." />
 
                     <TextView
                         android:layout_width="match_parent"
