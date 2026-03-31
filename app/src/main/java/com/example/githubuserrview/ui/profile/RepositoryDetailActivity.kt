@@ -3,6 +3,7 @@ package com.example.githubuserrview.ui.profile
 import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
+import android.graphics.drawable.PictureDrawable
 import android.net.Uri
 import android.os.Bundle
 import android.util.Base64
@@ -12,6 +13,8 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import com.bumptech.glide.Glide
+import com.caverock.androidsvg.SVG
+import com.example.githubuserrview.BuildConfig
 import com.example.githubuserrview.R
 import com.example.githubuserrview.auth.GithubAuthRepository
 import com.example.githubuserrview.data.model.GithubBranch
@@ -32,14 +35,22 @@ import com.google.android.material.chip.ChipGroup
 import java.text.SimpleDateFormat
 import java.util.Locale
 import java.util.TimeZone
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import okhttp3.OkHttpClient
+import okhttp3.Request
 
 class RepositoryDetailActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityRepositoryDetailBinding
     private val githubAuthRepository by lazy { GithubAuthRepository(this) }
+    private val previewImageClient by lazy { OkHttpClient() }
     private var currentRepository: GithubRepo? = null
+    private var previewLoadJob: Job? = null
+    private var debugPreviewMode = DebugPreviewMode.LIVE_REPO
 
     override fun onCreate(savedInstanceState: Bundle?) {
         AppThemeManager.apply(this)
@@ -62,7 +73,7 @@ class RepositoryDetailActivity : AppCompatActivity() {
             openExternalUrl(currentRepository?.htmlUrl)
         }
         binding.btnRepoOpenHomepage.setOnClickListener {
-            openExternalUrl(currentRepository?.homepage)
+            openExternalUrl(resolveActiveHomepageUrl(currentRepository?.homepage))
         }
         binding.btnRepoOpenOwnerProfile.setOnClickListener {
             currentRepository?.owner?.login?.takeIf { it.isNotBlank() }?.let { ownerLogin ->
@@ -74,6 +85,12 @@ class RepositoryDetailActivity : AppCompatActivity() {
         }
         binding.btnRepoRefresh.setOnClickListener {
             loadRepository(owner, repositoryName, fullName, showRefreshToast = true)
+        }
+        if (BuildConfig.DEBUG) {
+            binding.btnRepoRefresh.setOnLongClickListener {
+                advanceDebugPreviewMode()
+                true
+            }
         }
 
         setRefreshEnabled(false)
@@ -178,6 +195,9 @@ class RepositoryDetailActivity : AppCompatActivity() {
 
     private fun bindRepository(repository: GithubRepo) {
         currentRepository = repository
+        val activeHomepageUrl = resolveActiveHomepageUrl(repository.homepage)
+        val normalizedHomepageUrl = normalizeExternalUrl(activeHomepageUrl)
+        val previewImageUrl = extractPreviewImageUrl(activeHomepageUrl)
 
         Glide.with(this)
             .load(repository.owner.avatarUrl)
@@ -215,7 +235,7 @@ class RepositoryDetailActivity : AppCompatActivity() {
         binding.tvRepoDetailLinks.text = getString(
             R.string.repo_detail_links,
             repository.htmlUrl,
-            repository.homepage?.takeIf { it.isNotBlank() }
+            normalizedHomepageUrl
                 ?: getString(R.string.detail_unknown_value)
         )
         binding.tvRepoDetailUpdated.text = getString(
@@ -226,8 +246,16 @@ class RepositoryDetailActivity : AppCompatActivity() {
             R.string.repo_detail_open_owner_profile,
             repository.owner.login
         )
-        binding.btnRepoOpenHomepage.isEnabled = !repository.homepage.isNullOrBlank()
-        binding.btnRepoOpenHomepage.alpha = if (repository.homepage.isNullOrBlank()) 0.55f else 1f
+        bindPreviewImage(previewImageUrl)
+        binding.btnRepoOpenHomepage.text = getString(
+            if (previewImageUrl != null) {
+                R.string.repo_detail_open_preview_image
+            } else {
+                R.string.repo_detail_open_homepage
+            }
+        )
+        binding.btnRepoOpenHomepage.isEnabled = normalizedHomepageUrl != null
+        binding.btnRepoOpenHomepage.alpha = if (normalizedHomepageUrl == null) 0.55f else 1f
         setRefreshEnabled(true)
     }
 
@@ -383,16 +411,133 @@ class RepositoryDetailActivity : AppCompatActivity() {
         }
     }
 
-    private fun openExternalUrl(rawUrl: String?) {
-        if (rawUrl.isNullOrBlank()) {
-            showToast(getString(R.string.detail_open_link_error))
+    private fun bindPreviewImage(previewImageUrl: String?) {
+        val hasPreview = !previewImageUrl.isNullOrBlank()
+
+        binding.tvRepoPreviewTitle.visibility = if (hasPreview) View.VISIBLE else View.GONE
+        binding.cardRepoPreview.visibility = if (hasPreview) View.VISIBLE else View.GONE
+
+        previewLoadJob?.cancel()
+
+        if (!hasPreview) {
+            binding.ivRepoPreview.setLayerType(View.LAYER_TYPE_NONE, null)
+            binding.ivRepoPreview.setImageDrawable(null)
+            Glide.with(this).clear(binding.ivRepoPreview)
             return
         }
 
-        val normalizedUrl = if (rawUrl.startsWith("http://") || rawUrl.startsWith("https://")) {
+        if (isSvgUrl(previewImageUrl)) {
+            Glide.with(this).clear(binding.ivRepoPreview)
+            loadSvgPreview(previewImageUrl.orEmpty())
+        } else {
+            binding.ivRepoPreview.setLayerType(View.LAYER_TYPE_NONE, null)
+            Glide.with(this)
+                .load(previewImageUrl)
+                .centerCrop()
+                .into(binding.ivRepoPreview)
+        }
+    }
+
+    private fun extractPreviewImageUrl(rawUrl: String?): String? {
+        val normalizedUrl = normalizeExternalUrl(rawUrl) ?: return null
+        val path = Uri.parse(normalizedUrl).encodedPath.orEmpty().lowercase(Locale.US)
+        return if (IMAGE_EXTENSIONS.any(path::endsWith)) normalizedUrl else null
+    }
+
+    private fun resolveActiveHomepageUrl(rawUrl: String?): String? {
+        return when (debugPreviewMode) {
+            DebugPreviewMode.LIVE_REPO -> rawUrl
+            DebugPreviewMode.SAMPLE_PNG -> DEBUG_SAMPLE_PNG_URL
+            DebugPreviewMode.SAMPLE_SVG -> DEBUG_SAMPLE_SVG_URL
+        }
+    }
+
+    private fun advanceDebugPreviewMode() {
+        debugPreviewMode = when (debugPreviewMode) {
+            DebugPreviewMode.LIVE_REPO -> DebugPreviewMode.SAMPLE_PNG
+            DebugPreviewMode.SAMPLE_PNG -> DebugPreviewMode.SAMPLE_SVG
+            DebugPreviewMode.SAMPLE_SVG -> DebugPreviewMode.LIVE_REPO
+        }
+
+        currentRepository?.let(::bindRepository)
+        showToast(
+            getString(
+                when (debugPreviewMode) {
+                    DebugPreviewMode.LIVE_REPO -> R.string.repo_detail_debug_preview_live
+                    DebugPreviewMode.SAMPLE_PNG -> R.string.repo_detail_debug_preview_png
+                    DebugPreviewMode.SAMPLE_SVG -> R.string.repo_detail_debug_preview_svg
+                }
+            )
+        )
+    }
+
+    private fun isSvgUrl(url: String?): Boolean {
+        if (url.isNullOrBlank()) {
+            return false
+        }
+        val path = Uri.parse(url).encodedPath.orEmpty().lowercase(Locale.US)
+        return path.endsWith(SVG_EXTENSION)
+    }
+
+    private fun loadSvgPreview(previewImageUrl: String) {
+        binding.ivRepoPreview.setImageDrawable(null)
+        binding.ivRepoPreview.setLayerType(View.LAYER_TYPE_SOFTWARE, null)
+
+        previewLoadJob = lifecycleScope.launch {
+            val drawable = withContext(Dispatchers.IO) {
+                fetchSvgDrawable(previewImageUrl)
+            }
+
+            if (
+                !isFinishing &&
+                !isDestroyed &&
+                resolveActiveHomepageUrl(currentRepository?.homepage)?.let(::normalizeExternalUrl) == previewImageUrl
+            ) {
+                if (drawable != null) {
+                    binding.ivRepoPreview.setImageDrawable(drawable)
+                } else {
+                    binding.cardRepoPreview.visibility = View.GONE
+                    binding.tvRepoPreviewTitle.visibility = View.GONE
+                }
+            }
+        }
+    }
+
+    private fun fetchSvgDrawable(previewImageUrl: String): PictureDrawable? {
+        return try {
+            val request = Request.Builder()
+                .url(previewImageUrl)
+                .build()
+            previewImageClient.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) {
+                    return null
+                }
+
+                val svg = response.body?.byteStream()?.use(SVG::getFromInputStream) ?: return null
+                PictureDrawable(svg.renderToPicture())
+            }
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    private fun normalizeExternalUrl(rawUrl: String?): String? {
+        if (rawUrl.isNullOrBlank()) {
+            return null
+        }
+
+        return if (rawUrl.startsWith("http://") || rawUrl.startsWith("https://")) {
             rawUrl
         } else {
             "https://$rawUrl"
+        }
+    }
+
+    private fun openExternalUrl(rawUrl: String?) {
+        val normalizedUrl = normalizeExternalUrl(rawUrl)
+        if (normalizedUrl == null) {
+            showToast(getString(R.string.detail_open_link_error))
+            return
         }
 
         try {
@@ -411,10 +556,30 @@ class RepositoryDetailActivity : AppCompatActivity() {
         return true
     }
 
+    override fun onDestroy() {
+        previewLoadJob?.cancel()
+        super.onDestroy()
+    }
+
     companion object {
         private const val EXTRA_OWNER = "extra_owner"
         private const val EXTRA_REPOSITORY_NAME = "extra_repository_name"
         private const val EXTRA_FULL_NAME = "extra_full_name"
+        private const val SVG_EXTENSION = ".svg"
+        private const val DEBUG_SAMPLE_PNG_URL =
+            "https://upload.wikimedia.org/wikipedia/commons/f/f6/Kaohsiung_Location_Map.png"
+        private const val DEBUG_SAMPLE_SVG_URL =
+            "https://upload.wikimedia.org/wikipedia/commons/4/4a/Commons-logo.svg"
+        private val IMAGE_EXTENSIONS = listOf(
+            ".png",
+            ".jpg",
+            ".jpeg",
+            ".webp",
+            ".gif",
+            ".bmp",
+            ".avif",
+            SVG_EXTENSION
+        )
 
         fun createIntent(
             context: Context,
@@ -428,6 +593,12 @@ class RepositoryDetailActivity : AppCompatActivity() {
                 putExtra(EXTRA_FULL_NAME, fullName)
             }
         }
+    }
+
+    private enum class DebugPreviewMode {
+        LIVE_REPO,
+        SAMPLE_PNG,
+        SAMPLE_SVG
     }
 
     private enum class SyncSource {

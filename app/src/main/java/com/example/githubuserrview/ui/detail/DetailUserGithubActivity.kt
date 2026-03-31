@@ -1,6 +1,7 @@
 package com.example.githubuserrview.ui.detail
 
 import android.content.Intent
+import android.os.Build
 import android.os.Bundle
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
@@ -20,7 +21,12 @@ class DetailUserGithubActivity : AppCompatActivity() {
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
         supportActionBar?.title = getString(R.string.bar_title_detail)
 
-        val listPackage = intent.getParcelableExtra<Package>(EXTRA_PACKAGE) as Package
+        val listPackage = getPackageExtra()
+            ?: run {
+                Toast.makeText(this, R.string.repo_detail_error_missing, Toast.LENGTH_SHORT).show()
+                finish()
+                return
+            }
 
         binding.ivDetailPhoto.setImageResource(listPackage.photo)
         binding.tvDetailId.text = listPackage.username
@@ -55,5 +61,12 @@ class DetailUserGithubActivity : AppCompatActivity() {
         const val EXTRA_PACKAGE = "extra_package"
     }
 
+    private fun getPackageExtra(): Package? {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            intent.getParcelableExtra(EXTRA_PACKAGE, Package::class.java)
+        } else {
+            @Suppress("DEPRECATION")
+            intent.getParcelableExtra(EXTRA_PACKAGE)
+        }
+    }
 }
-

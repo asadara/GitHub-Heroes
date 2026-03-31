@@ -32,12 +32,13 @@ def asBuildConfigString = { String value ->
 }
 
 android {
-    compileSdk 31
+    namespace 'com.example.githubuserrview'
+    compileSdk 33
 
     defaultConfig {
         applicationId "com.example.githubuserrview"
         minSdk 23
-        targetSdk 31
+        targetSdk 33
         versionCode 1
         versionName "1.0"
 
@@ -77,8 +78,7 @@ android {
     kotlinOptions {
         jvmTarget = '1.8'
     }
-    compileSdkVersion 31
-    buildToolsVersion '31.0.0'
+    buildToolsVersion '33.0.2'
 
     buildFeatures{
         viewBinding true
@@ -95,6 +95,7 @@ dependencies {
     implementation 'androidx.constraintlayout:constraintlayout:2.1.2'
     implementation 'de.hdodenhof:circleimageview:3.1.0'
     implementation 'com.github.bumptech.glide:glide:4.12.0'
+    implementation 'com.caverock:androidsvg-aar:1.4'
 
     //view pager & tablayout
     implementation "androidx.viewpager2:viewpager2:1.0.0"
@@ -119,9 +120,9 @@ dependencies {
     implementation "org.jetbrains.kotlinx:kotlinx-coroutines-android:1.5.2"
 
     //room database
-    implementation 'androidx.room:room-runtime:2.3.0'
-    implementation "androidx.room:room-ktx:2.3.0"
-    kapt 'androidx.room:room-compiler:2.3.0'
+    implementation 'androidx.room:room-runtime:2.5.2'
+    implementation "androidx.room:room-ktx:2.5.2"
+    kapt 'androidx.room:room-compiler:2.5.2'
 
     testImplementation 'junit:junit:4.13.2'
     androidTestImplementation 'androidx.test.ext:junit:1.1.3'

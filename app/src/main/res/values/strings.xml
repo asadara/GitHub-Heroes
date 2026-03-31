@@ -207,6 +207,7 @@
     <string name="repo_detail_state_cache_error">Live refresh failed. Showing the latest cached repository snapshot.</string>
     <string name="repo_detail_open_github">Open on GitHub</string>
     <string name="repo_detail_open_homepage">Open Homepage</string>
+    <string name="repo_detail_open_preview_image">Open Preview Image</string>
     <string name="repo_detail_open_owner_profile_default">Open Owner Profile</string>
     <string name="repo_detail_open_owner_profile">Open @%1$s Profile</string>
     <string name="repo_detail_visibility">Visibility: %1$s</string>
@@ -216,6 +217,8 @@
     <string name="repo_detail_stats">%1$d stars | %2$d forks | %3$d watchers | %4$d issues</string>
     <string name="repo_detail_links">GitHub: %1$s\nHomepage: %2$s</string>
     <string name="repo_detail_updated">Updated %1$s</string>
+    <string name="repo_detail_preview_title">Preview Image</string>
+    <string name="repo_detail_preview_hint">Preview ini ditampilkan jika creator mengisi field homepage repo dengan direct image URL.</string>
     <string name="repo_detail_branches_title">Branches</string>
     <string name="repo_detail_branches_empty">Branch belum tersedia untuk repository ini.</string>
     <string name="repo_detail_branch_protected">%1$s protected</string>
@@ -232,6 +235,9 @@
     <string name="repo_detail_commits_empty">Commit terbaru belum tersedia untuk repository ini.</string>
     <string name="repo_detail_refreshed">Detail repository berhasil disegarkan.</string>
     <string name="repo_detail_error_missing">Repository yang diminta tidak valid.</string>
+    <string name="repo_detail_debug_preview_live">Debug preview: memakai URL homepage asli repo.</string>
+    <string name="repo_detail_debug_preview_png">Debug preview: sample PNG aktif.</string>
+    <string name="repo_detail_debug_preview_svg">Debug preview: sample SVG aktif.</string>
     <string name="profile_about_title">Tentang GitHub Heroes</string>
     <string name="profile_about_body">Aplikasi ini dipoles ulang untuk repro project lama, eksplorasi profil GitHub, pencarian live, dan penyimpanan favorites yang stabil.</string>
     <string name="profile_repo_title">Repository</string>
