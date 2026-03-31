@@ -83,11 +83,19 @@ class ResultActivity : AppCompatActivity() {
             adapter = publicRepoAdapter
         }
         binding.btnPublicProfileRefresh.setOnClickListener {
+            binding.swipeRefreshResult.isRefreshing = true
             refreshPublicProfile()
         }
         binding.btnFollowUser.setOnClickListener {
             toggleUserFollow()
         }
+        binding.swipeRefreshResult.setOnRefreshListener {
+            refreshPublicProfile()
+        }
+        binding.swipeRefreshResult.setColorSchemeResources(
+            R.color.theme_ocean_primary,
+            R.color.theme_forest_primary
+        )
         bindPublicRepositories(emptyList())
         renderPublicProfileState(isError = false, timestamp = null)
         renderPublicRepositoriesState(isError = false, timestamp = null)
@@ -402,6 +410,13 @@ class ResultActivity : AppCompatActivity() {
             when (val result = githubAuthRepository.setUserFollowing(user.login, shouldFollow)) {
                 is NetworkResult.Success -> {
                     currentUserSocialState = socialState.copy(isFollowing = shouldFollow)
+                    currentUser = user.copy(
+                        followers = maxOf(
+                            0,
+                            user.followers + if (shouldFollow) 1 else -1
+                        )
+                    )
+                    currentUser?.let(::refreshDisplayedUserMetrics)
                     renderUserSocialState()
                     Toast.makeText(
                         this@ResultActivity,
@@ -478,6 +493,23 @@ class ResultActivity : AppCompatActivity() {
         binding.btnFollowUser.alpha = if (binding.btnFollowUser.isEnabled) 1f else 0.65f
     }
 
+    private fun refreshDisplayedUserMetrics(user: DetailUserResponse) {
+        val aboutText = user.bio?.takeIf { it.isNotBlank() }
+            ?: getString(
+                R.string.detail_about_fallback,
+                user.login,
+                user.type.lowercase(Locale.getDefault())
+            )
+
+        binding.tvStatFollowersValue.text = String.format(Locale.getDefault(), "%,d", user.followers)
+        binding.tvStatFollowingValue.text = String.format(Locale.getDefault(), "%,d", user.following)
+        binding.tvStatReposValue.text = String.format(Locale.getDefault(), "%,d", user.publicRepos)
+        binding.tvStatGistsValue.text = String.format(Locale.getDefault(), "%,d", user.publicGists)
+        binding.tvProfileSummary.text = buildSummary(user, aboutText)
+        binding.tvInsightTitle.text = resolveInsightTitle(user)
+        binding.tvInsightBody.text = buildInsightBody(user)
+    }
+
     private fun renderPublicProfileState(isError: Boolean, timestamp: Long?) {
         binding.tvPublicProfileState.text = when {
             isError -> getString(R.string.detail_profile_state_error)
@@ -503,6 +535,9 @@ class ResultActivity : AppCompatActivity() {
     private fun setRefreshingState(isRefreshing: Boolean) {
         binding.btnPublicProfileRefresh.isEnabled = !isRefreshing
         binding.btnPublicProfileRefresh.alpha = if (isRefreshing) 0.6f else 1f
+        if (!isRefreshing) {
+            binding.swipeRefreshResult.isRefreshing = false
+        }
     }
 
     private fun openRepository(repository: GithubRepo) {

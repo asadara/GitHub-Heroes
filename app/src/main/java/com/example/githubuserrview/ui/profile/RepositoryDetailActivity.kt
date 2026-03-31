@@ -64,6 +64,7 @@ class RepositoryDetailActivity : AppCompatActivity() {
     private var currentRepositorySocialState: GithubAuthRepository.GithubRepositorySocialState? = null
     private var currentIssues: List<GithubIssue> = emptyList()
     private var selectedIssue: GithubIssue? = null
+    private var issueActionStatusMessage: String? = null
     private var isRepositorySocialActionRunning = false
     private var isIssueActionRunning = false
     private var previewLoadJob: Job? = null
@@ -101,8 +102,16 @@ class RepositoryDetailActivity : AppCompatActivity() {
             }
         }
         binding.btnRepoRefresh.setOnClickListener {
+            binding.swipeRefreshRepoDetail.isRefreshing = true
             loadRepository(owner, repositoryName, fullName, showRefreshToast = true)
         }
+        binding.swipeRefreshRepoDetail.setOnRefreshListener {
+            loadRepository(owner, repositoryName, fullName, showRefreshToast = true)
+        }
+        binding.swipeRefreshRepoDetail.setColorSchemeResources(
+            R.color.theme_ocean_primary,
+            R.color.theme_forest_primary
+        )
         binding.btnRepoStar.setOnClickListener {
             toggleRepositoryStar()
         }
@@ -149,7 +158,6 @@ class RepositoryDetailActivity : AppCompatActivity() {
             val cachedSnapshot = githubAuthRepository.getCachedRepositorySnapshot(fullName)
             cachedSnapshot?.let { snapshot ->
                 bindRepository(snapshot.repository)
-                loadRepositorySocialState(snapshot.repository)
                 renderRepositoryState(
                     source = SyncSource.CACHE,
                     lastSyncEpochMs = snapshot.syncedAtEpochMs
@@ -175,10 +183,12 @@ class RepositoryDetailActivity : AppCompatActivity() {
                 githubAuthRepository.getRepositoryIssues(owner, repositoryName)
             }
 
+            var repositoryForSocialState: GithubRepo? = null
+
             when (val result = detailDeferred.await()) {
                 is NetworkResult.Success -> {
                     bindRepository(result.data)
-                    loadRepositorySocialState(result.data)
+                    repositoryForSocialState = result.data
                     renderRepositoryState(
                         source = SyncSource.LIVE,
                         lastSyncEpochMs = System.currentTimeMillis()
@@ -188,6 +198,7 @@ class RepositoryDetailActivity : AppCompatActivity() {
                     if (currentRepository == null) {
                         showToast(result.message)
                     } else {
+                        repositoryForSocialState = currentRepository
                         renderRepositoryState(
                             source = SyncSource.CACHE_ERROR,
                             lastSyncEpochMs = cachedSnapshot?.syncedAtEpochMs
@@ -221,11 +232,14 @@ class RepositoryDetailActivity : AppCompatActivity() {
                 is NetworkResult.Error -> bindIssues(emptyList())
             }
 
+            repositoryForSocialState?.let(::loadRepositorySocialState)
+
             if (showRefreshToast && currentRepository != null) {
                 showToast(getString(R.string.repo_detail_refreshed))
             }
             showLoading(false)
             setRefreshEnabled(currentRepository != null)
+            binding.swipeRefreshRepoDetail.isRefreshing = false
         }
     }
 
@@ -522,6 +536,10 @@ class RepositoryDetailActivity : AppCompatActivity() {
             ) {
                 is NetworkResult.Success -> {
                     currentRepositorySocialState = socialState.copy(isStarred = shouldStar)
+                    syncRepositoryMetrics(
+                        owner = repository.owner.login,
+                        repositoryName = repository.name
+                    )
                     renderRepositorySocialState()
                     showToast(
                         getString(
@@ -561,6 +579,10 @@ class RepositoryDetailActivity : AppCompatActivity() {
             ) {
                 is NetworkResult.Success -> {
                     currentRepositorySocialState = socialState.copy(isWatching = shouldWatch)
+                    syncRepositoryMetrics(
+                        owner = repository.owner.login,
+                        repositoryName = repository.name
+                    )
                     renderRepositorySocialState()
                     showToast(
                         getString(
@@ -654,6 +676,9 @@ class RepositoryDetailActivity : AppCompatActivity() {
     }
 
     private fun renderIssueActionState(statusMessage: String? = null) {
+        if (statusMessage != null) {
+            issueActionStatusMessage = statusMessage
+        }
         val hasSession = githubAuthRepository.getSession() != null
         val hasIssues = currentIssues.isNotEmpty()
         val hasSelection = selectedIssue != null
@@ -664,7 +689,7 @@ class RepositoryDetailActivity : AppCompatActivity() {
         } ?: getString(R.string.repo_detail_issue_target_empty)
 
         binding.tvRepoIssueActionStatus.text = when {
-            !statusMessage.isNullOrBlank() -> statusMessage
+            !issueActionStatusMessage.isNullOrBlank() -> issueActionStatusMessage
             !hasSession -> getString(R.string.repo_detail_social_status_signed_out)
             else -> getString(R.string.repo_detail_issue_action_status_idle)
         }
@@ -691,6 +716,7 @@ class RepositoryDetailActivity : AppCompatActivity() {
             .setTitle(R.string.repo_detail_issue_picker_title)
             .setItems(issueItems) { _, which ->
                 selectedIssue = currentIssues.getOrNull(which)
+                issueActionStatusMessage = null
                 renderIssueActionState()
             }
             .setNegativeButton(android.R.string.cancel, null)
@@ -729,6 +755,7 @@ class RepositoryDetailActivity : AppCompatActivity() {
 
                 dialog.dismiss()
                 isIssueActionRunning = true
+                issueActionStatusMessage = getString(R.string.repo_detail_issue_comment_dialog_title)
                 renderIssueActionState(statusMessage = getString(R.string.repo_detail_issue_comment_dialog_title))
                 lifecycleScope.launch {
                     when (
@@ -740,11 +767,9 @@ class RepositoryDetailActivity : AppCompatActivity() {
                         )
                     ) {
                         is NetworkResult.Success -> {
-                            renderIssueActionState(
-                                statusMessage = getString(
-                                    R.string.repo_detail_issue_comment_success,
-                                    issue.number
-                                )
+                            issueActionStatusMessage = getString(
+                                R.string.repo_detail_issue_comment_success,
+                                issue.number
                             )
                             showToast(
                                 getString(
@@ -760,6 +785,7 @@ class RepositoryDetailActivity : AppCompatActivity() {
                             )
                         }
                         is NetworkResult.Error -> {
+                            issueActionStatusMessage = result.message
                             renderIssueActionState(statusMessage = result.message)
                             showToast(result.message)
                         }
@@ -792,6 +818,7 @@ class RepositoryDetailActivity : AppCompatActivity() {
             .setItems(reactionOptions.map(ReactionOption::label).toTypedArray()) { _, which ->
                 val reaction = reactionOptions.getOrNull(which) ?: return@setItems
                 isIssueActionRunning = true
+                issueActionStatusMessage = reaction.label
                 renderIssueActionState(statusMessage = reaction.label)
                 lifecycleScope.launch {
                     when (
@@ -808,10 +835,12 @@ class RepositoryDetailActivity : AppCompatActivity() {
                                 reaction.label,
                                 issue.number
                             )
+                            issueActionStatusMessage = successMessage
                             renderIssueActionState(statusMessage = successMessage)
                             showToast(successMessage)
                         }
                         is NetworkResult.Error -> {
+                            issueActionStatusMessage = result.message
                             renderIssueActionState(statusMessage = result.message)
                             showToast(result.message)
                         }
@@ -822,6 +851,32 @@ class RepositoryDetailActivity : AppCompatActivity() {
             }
             .setNegativeButton(android.R.string.cancel, null)
             .show()
+    }
+
+    private fun syncRepositoryMetrics(owner: String, repositoryName: String) {
+        lifecycleScope.launch {
+            when (val result = githubAuthRepository.getRepositoryDetail(owner, repositoryName)) {
+                is NetworkResult.Success -> {
+                    currentRepository = result.data
+                    refreshRepositoryMetricViews(result.data)
+                }
+                is NetworkResult.Error -> Unit
+            }
+        }
+    }
+
+    private fun refreshRepositoryMetricViews(repository: GithubRepo) {
+        binding.tvRepoDetailStats.text = getString(
+            R.string.repo_detail_stats,
+            repository.stargazersCount,
+            repository.forksCount,
+            repository.watchersCount,
+            repository.openIssuesCount
+        )
+        binding.tvRepoDetailUpdated.text = getString(
+            R.string.repo_detail_updated,
+            formatUpdatedAt(repository.updatedAt)
+        )
     }
 
     private fun formatUpdatedAt(rawDate: String?): String {
