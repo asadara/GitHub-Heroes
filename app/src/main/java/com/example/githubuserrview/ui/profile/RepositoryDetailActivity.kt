@@ -32,6 +32,16 @@ import com.example.githubuserrview.ui.common.SyncStatusFormatter
 import com.example.githubuserrview.ui.detail.ResultActivity
 import com.google.android.material.chip.Chip
 import com.google.android.material.chip.ChipGroup
+import io.noties.markwon.AbstractMarkwonPlugin
+import io.noties.markwon.Markwon
+import io.noties.markwon.MarkwonConfiguration
+import io.noties.markwon.ext.strikethrough.StrikethroughPlugin
+import io.noties.markwon.ext.tables.TablePlugin
+import io.noties.markwon.ext.tasklist.TaskListPlugin
+import io.noties.markwon.html.HtmlPlugin
+import io.noties.markwon.image.destination.ImageDestinationProcessor
+import io.noties.markwon.image.glide.GlideImagesPlugin
+import java.net.URI
 import java.text.SimpleDateFormat
 import java.util.Locale
 import java.util.TimeZone
@@ -260,14 +270,58 @@ class RepositoryDetailActivity : AppCompatActivity() {
     }
 
     private fun bindReadme(readme: GithubReadme?) {
-        val content = readme?.content
+        val markdown = readme?.content
             ?.takeIf { !it.isBlank() }
             ?.let(::decodeReadme)
             ?.trim()
             ?.takeIf { it.isNotBlank() }
 
-        binding.tvRepoReadme.text = content?.take(1600)
-            ?: getString(R.string.repo_detail_readme_empty)
+        if (markdown == null) {
+            binding.tvRepoReadme.text = getString(R.string.repo_detail_readme_empty)
+            return
+        }
+
+        createReadmeMarkwon(readme).setMarkdown(binding.tvRepoReadme, markdown)
+    }
+
+    private fun createReadmeMarkwon(readme: GithubReadme): Markwon {
+        val readmeImageBaseUrl = resolveReadmeDirectoryUrl(readme.downloadUrl)
+        val readmeImageRootUrl = resolveReadmeRootUrl(readme.downloadUrl, readme.path)
+        val readmeHtmlBaseUrl = resolveReadmeDirectoryUrl(readme.htmlUrl)
+        val readmeHtmlRootUrl = resolveReadmeRootUrl(readme.htmlUrl, readme.path)
+        val readmeHtmlUrl = normalizeExternalUrl(readme.htmlUrl)
+
+        return Markwon.builder(this)
+            .usePlugin(GlideImagesPlugin.create(this))
+            .usePlugin(HtmlPlugin.create())
+            .usePlugin(StrikethroughPlugin.create())
+            .usePlugin(TablePlugin.create(this))
+            .usePlugin(TaskListPlugin.create(this))
+            .usePlugin(object : AbstractMarkwonPlugin() {
+                override fun configureConfiguration(builder: MarkwonConfiguration.Builder) {
+                    builder.imageDestinationProcessor(object : ImageDestinationProcessor() {
+                        override fun process(destination: String): String {
+                            return resolveMarkdownUrl(
+                                candidate = destination,
+                                directoryBaseUrl = readmeImageBaseUrl,
+                                rootBaseUrl = readmeImageRootUrl,
+                                anchorBaseUrl = readmeImageBaseUrl
+                            ) ?: destination
+                        }
+                    })
+                    builder.linkResolver { _, link ->
+                        openExternalUrl(
+                            resolveMarkdownUrl(
+                                candidate = link,
+                                directoryBaseUrl = readmeHtmlBaseUrl,
+                                rootBaseUrl = readmeHtmlRootUrl,
+                                anchorBaseUrl = readmeHtmlUrl
+                            ) ?: link
+                        )
+                    }
+                }
+            })
+            .build()
     }
 
     private fun bindCommits(commits: List<GithubCommit>) {
@@ -409,6 +463,79 @@ class RepositoryDetailActivity : AppCompatActivity() {
         } catch (_: Exception) {
             encodedContent
         }
+    }
+
+    private fun resolveReadmeDirectoryUrl(rawUrl: String?): String? {
+        val normalizedUrl = normalizeExternalUrl(rawUrl) ?: return null
+        return try {
+            val uri = URI(normalizedUrl)
+            val path = uri.path.orEmpty()
+            val directoryPath = when {
+                path.isBlank() -> "/"
+                path.endsWith("/") -> path
+                path.contains("/") -> path.substringBeforeLast("/") + "/"
+                else -> "/"
+            }
+            URI(uri.scheme, uri.authority, directoryPath, null, null).toString()
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    private fun resolveReadmeRootUrl(rawUrl: String?, readmePath: String?): String? {
+        val normalizedUrl = normalizeExternalUrl(rawUrl) ?: return null
+        val normalizedPath = readmePath
+            ?.trim()
+            ?.removePrefix("/")
+            ?.takeIf { it.isNotBlank() }
+            ?: return resolveReadmeDirectoryUrl(rawUrl)
+
+        return try {
+            val uri = URI(normalizedUrl)
+            val path = uri.path.orEmpty()
+            val rootPath = if (path.endsWith(normalizedPath)) {
+                path.removeSuffix(normalizedPath)
+            } else {
+                resolveReadmeDirectoryUrl(rawUrl)?.let { URI(it).path } ?: path
+            }
+            URI(uri.scheme, uri.authority, rootPath, null, null).toString()
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    private fun resolveMarkdownUrl(
+        candidate: String?,
+        directoryBaseUrl: String?,
+        rootBaseUrl: String?,
+        anchorBaseUrl: String?
+    ): String? {
+        val rawCandidate = candidate?.trim()?.takeIf { it.isNotBlank() } ?: return null
+        if (rawCandidate.startsWith("//")) {
+            return "https:$rawCandidate"
+        }
+        if (Uri.parse(rawCandidate).scheme != null) {
+            return rawCandidate
+        }
+        if (rawCandidate.startsWith("#")) {
+            return anchorBaseUrl?.substringBefore("#")?.plus(rawCandidate) ?: rawCandidate
+        }
+        if (rawCandidate.startsWith("/")) {
+            return rootBaseUrl?.let { joinUrl(it, rawCandidate.removePrefix("/")) } ?: rawCandidate
+        }
+
+        return directoryBaseUrl?.let {
+            try {
+                URI(it).resolve(rawCandidate).toString()
+            } catch (_: Exception) {
+                rawCandidate
+            }
+        } ?: rawCandidate
+    }
+
+    private fun joinUrl(baseUrl: String, relativePath: String): String {
+        val normalizedBase = if (baseUrl.endsWith("/")) baseUrl else "$baseUrl/"
+        return normalizedBase + relativePath
     }
 
     private fun bindPreviewImage(previewImageUrl: String?) {
