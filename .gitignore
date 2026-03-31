@@ -2,6 +2,7 @@
 .gradle
 /local.properties
 /.toolchain
+/.temp
 /.idea
 *.zip
 hs_err_pid*.log
